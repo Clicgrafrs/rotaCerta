@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Rota Certa</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 600px;
+      margin: auto;
+    }
+    input, button {
+      width: 100%;
+      padding: 8px;
+      margin: 6px 0;
+    }
+  </style>
+</head>
+<body>
+
+<h2>Rota Certa – Planejador de Visitas</h2>
+
+<label>Quantos endereços deseja inserir? (máx. 50)</label>
+<input type="number" id="qtd" min="1" max="50">
+<button onclick="gerarCampos()">Criar campos</button>
+
+<div id="enderecos"></div>
+
+<button onclick="calcularRota()">Calcular rota</button>
+
+<h3>Resultado:</h3>
+<ol id="resultado"></ol>
+
+<script src="script.js"></script>
+</body>
+</html>
