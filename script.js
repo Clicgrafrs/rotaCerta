@@ -12,8 +12,8 @@ function gerarCampos() {
   const div = document.getElementById("enderecos");
   div.innerHTML = "";
 
-  if (isNaN(qtd) || qtd < 1 || qtd > 50) {
-    alert("Informe um número entre 1 e 50");
+  if (isNaN(qtd) || qtd < 1 || qtd > 10) {
+    alert("Informe um número entre 1 e 10");
     return;
   }
 
