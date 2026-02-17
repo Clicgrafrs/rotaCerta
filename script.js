@@ -1,5 +1,5 @@
 /* =====================================
-   Rota Certa - script.js
+   Rota Certa - script.js (VERSÃO FINAL)
    ===================================== */
 
 const API_KEY = "eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6IjY2ZTQyNDAxM2IxNTQxMmRiYmQ3M2E5NGVkYzNhNzk2IiwiaCI6Im11cm11cjY0In0=";
@@ -10,10 +10,12 @@ console.log("script.js carregado com sucesso");
    Gerar campos de destinos
    ================================ */
 function gerarCampos() {
-  const qtd = parseInt(document.getElementById("qtd").value, 10);
+  const qtdInput = document.getElementById("qtd");
   const div = document.getElementById("enderecos");
 
   div.innerHTML = "";
+
+  const qtd = parseInt(qtdInput.value, 10);
 
   if (isNaN(qtd) || qtd < 1 || qtd > 50) {
     alert("Informe um número válido entre 1 e 50");
@@ -24,12 +26,13 @@ function gerarCampos() {
     const input = document.createElement("input");
     input.type = "text";
     input.placeholder = "Destino " + i;
+    input.style.marginBottom = "6px";
     div.appendChild(input);
   }
 }
 
 /* ================================
-   Geocodificar endereço
+   Geocodificação de endereço
    ================================ */
 async function geocodificar(endereco) {
   const url =
@@ -49,7 +52,8 @@ async function geocodificar(endereco) {
     throw new Error("Endereço não encontrado: " + endereco);
   }
 
-  return data.features[0].geometry.coordinates; // [lon, lat]
+  // Retorna no formato exigido pela API de rotas: [lon, lat]
+  return data.features[0].geometry.coordinates;
 }
 
 /* ================================
@@ -75,11 +79,11 @@ async function calcularRota() {
   try {
     const coords = [];
 
-    // Origem
+    // 1️⃣ Origem
     const origemCoord = await geocodificar(origemTexto);
     coords.push(origemCoord);
 
-    // Destinos
+    // 2️⃣ Destinos
     for (let input of inputs) {
       const valor = input.value.trim();
       if (valor !== "") {
@@ -93,6 +97,7 @@ async function calcularRota() {
       return;
     }
 
+    // 3️⃣ Chamada da API de rotas
     const rotaResponse = await fetch(
       "https://api.openrouteservice.org/v2/directions/driving-car",
       {
@@ -113,26 +118,32 @@ async function calcularRota() {
 
     const rotaData = await rotaResponse.json();
 
-    if (
-      !rotaData.features ||
-      rotaData.features.length === 0 ||
-      !rotaData.features[0].properties.segments ||
-      rotaData.features[0].properties.segments.length === 0
-    ) {
-      lista.innerHTML = "<li>Rota calculada, mas sem instruções detalhadas.</li>";
+    // 4️⃣ Validação TOTAL da resposta (NUNCA quebra)
+    const feature = rotaData.features && rotaData.features[0];
+
+    if (!feature || !feature.properties) {
+      lista.innerHTML = "<li>Rota calculada, mas sem detalhes.</li>";
       return;
     }
 
-    const passos = rotaData.features[0].properties.segments[0].steps || [];
+    const segments = feature.properties.segments;
 
-    if (passos.length === 0) {
+    if (!segments || segments.length === 0) {
+      lista.innerHTML = "<li>Rota calculada com sucesso (sem instruções detalhadas).</li>";
+      return;
+    }
+
+    const steps = segments[0].steps;
+
+    if (!steps || steps.length === 0) {
       lista.innerHTML = "<li>Rota calculada com sucesso.</li>";
       return;
     }
 
-    passos.forEach(passo => {
+    // 5️⃣ Exibir instruções
+    steps.forEach(step => {
       const li = document.createElement("li");
-      li.textContent = passo.instruction;
+      li.textContent = step.instruction;
       lista.appendChild(li);
     });
 
