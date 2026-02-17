@@ -1,8 +1,6 @@
 /* =====================================
-   Rota Certa - script.js (VERSÃO FINAL)
+   Rota Certa - script.js (FINAL + OTIMIZAÇÃO)
    ===================================== */
-
-const API_KEY = "eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6IjY2ZTQyNDAxM2IxNTQxMmRiYmQ3M2E5NGVkYzNhNzk2IiwiaCI6Im11cm11cjY0In0=";
 
 console.log("script.js carregado com sucesso");
 
@@ -15,7 +13,7 @@ function gerarCampos() {
   div.innerHTML = "";
 
   if (isNaN(qtd) || qtd < 1 || qtd > 50) {
-    alert("Informe um número válido entre 1 e 50");
+    alert("Informe um número entre 1 e 50");
     return;
   }
 
@@ -28,26 +26,73 @@ function gerarCampos() {
 }
 
 /* ================================
-   Geocodificação
+   Geocodificação (OpenStreetMap – grátis)
    ================================ */
 async function geocodificar(endereco) {
-  const url =
-    "https://api.openrouteservice.org/geocode/search" +
-    "?api_key=" + API_KEY +
-    "&text=" + encodeURIComponent(endereco);
+  const url = "https://nominatim.openstreetmap.org/search?format=json&q=" +
+              encodeURIComponent(endereco);
 
   const response = await fetch(url);
   const data = await response.json();
 
-  if (!data.features || data.features.length === 0) {
+  if (!data || data.length === 0) {
     throw new Error("Endereço não encontrado: " + endereco);
   }
 
-  return data.features[0].geometry.coordinates; // [lon, lat]
+  return {
+    texto: endereco,
+    lat: parseFloat(data[0].lat),
+    lon: parseFloat(data[0].lon)
+  };
 }
 
 /* ================================
-   Calcular rota + gerar link Maps
+   Distância (Haversine)
+   ================================ */
+function distancia(p1, p2) {
+  const R = 6371;
+  const dLat = (p2.lat - p1.lat) * Math.PI / 180;
+  const dLon = (p2.lon - p1.lon) * Math.PI / 180;
+
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(p1.lat * Math.PI / 180) *
+    Math.cos(p2.lat * Math.PI / 180) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+/* ================================
+   Ordenar destinos (mais próximo)
+   ================================ */
+function ordenarPorProximidade(origem, destinos) {
+  const rota = [];
+  let atual = origem;
+  let restantes = [...destinos];
+
+  while (restantes.length > 0) {
+    let maisProximoIndex = 0;
+    let menorDistancia = distancia(atual, restantes[0]);
+
+    for (let i = 1; i < restantes.length; i++) {
+      const d = distancia(atual, restantes[i]);
+      if (d < menorDistancia) {
+        menorDistancia = d;
+        maisProximoIndex = i;
+      }
+    }
+
+    const proximo = restantes.splice(maisProximoIndex, 1)[0];
+    rota.push(proximo);
+    atual = proximo;
+  }
+
+  return rota;
+}
+
+/* ================================
+   Calcular rota otimizada
    ================================ */
 async function calcularRota() {
   const origemTexto = document.getElementById("origem").value.trim();
@@ -62,54 +107,56 @@ async function calcularRota() {
   }
 
   try {
-    const destinosTexto = [];
+    const origem = await geocodificar(origemTexto);
+    const destinos = [];
 
     for (let input of inputs) {
-      const v = input.value.trim();
-      if (v) destinosTexto.push(v);
+      if (input.value.trim()) {
+        destinos.push(await geocodificar(input.value.trim()));
+      }
     }
 
-    if (destinosTexto.length === 0) {
+    if (destinos.length === 0) {
       alert("Informe pelo menos um destino");
       return;
     }
 
-    /* 🚨 Limite real do Google Maps */
-    if (destinosTexto.length > 9) {
-      alert("O Google Maps aceita no máximo 9 paradas. Use até 9 destinos.");
+    const rotaOrdenada = ordenarPorProximidade(origem, destinos);
+
+    /* 🚨 Limite Google Maps */
+    if (rotaOrdenada.length > 9) {
+      alert("Google Maps aceita no máximo 9 paradas");
       return;
     }
 
     /* =========================
-       Gera link do Google Maps
+       Gerar link do Google Maps
        ========================= */
-    const origin = encodeURIComponent(origemTexto);
-    const destination = encodeURIComponent(destinosTexto[destinosTexto.length - 1]);
+    const origin = encodeURIComponent(origem.texto);
+    const destination = encodeURIComponent(
+      rotaOrdenada[rotaOrdenada.length - 1].texto
+    );
 
-    let urlMaps =
+    let url =
       "https://www.google.com/maps/dir/?api=1" +
       "&origin=" + origin +
       "&destination=" + destination +
       "&travelmode=driving";
 
-    if (destinosTexto.length > 1) {
-      const waypoints = destinosTexto
-        .slice(0, destinosTexto.length - 1)
-        .map(d => encodeURIComponent(d))
+    if (rotaOrdenada.length > 1) {
+      const waypoints = rotaOrdenada
+        .slice(0, rotaOrdenada.length - 1)
+        .map(d => encodeURIComponent(d.texto))
         .join("|");
 
-      urlMaps += "&waypoints=" + waypoints;
+      url += "&waypoints=" + waypoints;
     }
 
     /* =========================
-       Exibe resultado
+       Exibir resultado
        ========================= */
     const li = document.createElement("li");
-    li.innerHTML = `
-      <a href="${urlMaps}" target="_blank">
-        👉 Abrir rota no Google Maps
-      </a>
-    `;
+    li.innerHTML = `<a href="${url}" target="_blank">🚗 Abrir rota otimizada no Google Maps</a>`;
     lista.appendChild(li);
 
   } catch (erro) {
