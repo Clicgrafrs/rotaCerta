@@ -1,5 +1,5 @@
 /* =====================================
-   Rota Certa - script.js (versão limpa)
+   Rota Certa - script.js
    ===================================== */
 
 const API_KEY = "eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6IjY2ZTQyNDAxM2IxNTQxMmRiYmQ3M2E5NGVkYzNhNzk2IiwiaCI6Im11cm11cjY0In0=";
@@ -7,81 +7,93 @@ const API_KEY = "eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6IjY2ZTQyNDA
 console.log("script.js carregado com sucesso");
 
 /* ================================
-   Gera campos de endereços
+   Gerar campos de destinos
    ================================ */
 function gerarCampos() {
-  var qtd = document.getElementById("qtd").value;
-  var div = document.getElementById("enderecos");
+  const qtd = parseInt(document.getElementById("qtd").value, 10);
+  const div = document.getElementById("enderecos");
 
   div.innerHTML = "";
-  qtd = parseInt(qtd, 10);
 
   if (isNaN(qtd) || qtd < 1 || qtd > 50) {
-    alert("Informe um número entre 1 e 50");
+    alert("Informe um número válido entre 1 e 50");
     return;
   }
 
-  for (var i = 1; i <= qtd; i++) {
-    var input = document.createElement("input");
+  for (let i = 1; i <= qtd; i++) {
+    const input = document.createElement("input");
     input.type = "text";
-    input.placeholder = "Endereço " + i;
-    input.style.display = "block";
-    input.style.marginBottom = "6px";
+    input.placeholder = "Destino " + i;
     div.appendChild(input);
   }
 }
 
 /* ================================
-   Geocodificação
+   Geocodificar endereço
    ================================ */
 async function geocodificar(endereco) {
-  var url =
+  const url =
     "https://api.openrouteservice.org/geocode/search" +
     "?api_key=" + API_KEY +
     "&text=" + encodeURIComponent(endereco);
 
-  var response = await fetch(url);
+  const response = await fetch(url);
 
   if (!response.ok) {
-    throw new Error("Erro ao geocodificar: " + endereco);
+    throw new Error("Erro ao buscar endereço: " + endereco);
   }
 
-  var data = await response.json();
+  const data = await response.json();
 
   if (!data.features || data.features.length === 0) {
     throw new Error("Endereço não encontrado: " + endereco);
   }
 
-  return data.features[0].geometry.coordinates;
+  return data.features[0].geometry.coordinates; // [lon, lat]
 }
 
 /* ================================
-   Calcula rota
+   Calcular rota
    ================================ */
 async function calcularRota() {
-  var inputs = document.querySelectorAll("#enderecos input");
-  var coords = [];
+  const origemTexto = document.getElementById("origem").value.trim();
+  const inputs = document.querySelectorAll("#enderecos input");
+  const lista = document.getElementById("resultado");
+
+  lista.innerHTML = "";
+
+  if (origemTexto === "") {
+    alert("Informe o ponto de partida");
+    return;
+  }
 
   if (inputs.length === 0) {
-    alert("Crie os campos antes de calcular a rota");
+    alert("Gere os campos de destinos primeiro");
     return;
   }
 
   try {
-    for (var i = 0; i < inputs.length; i++) {
-      var valor = inputs[i].value.trim();
+    const coords = [];
+
+    // Origem
+    const origemCoord = await geocodificar(origemTexto);
+    coords.push(origemCoord);
+
+    // Destinos
+    for (let input of inputs) {
+      const valor = input.value.trim();
       if (valor !== "") {
-        var coord = await geocodificar(valor);
+        const coord = await geocodificar(valor);
         coords.push(coord);
       }
     }
 
     if (coords.length < 2) {
-      alert("Informe pelo menos dois endereços válidos");
+      alert("Informe pelo menos um destino válido");
       return;
     }
 
-    var rotaResponse = await fetch(
+    const rotaResponse = await fetch(
       "https://api.openrouteservice.org/v2/directions/driving-car",
       {
         method: "POST",
@@ -99,18 +111,30 @@ async function calcularRota() {
       throw new Error("Erro ao calcular a rota");
     }
 
-    var rotaData = await rotaResponse.json();
+    const rotaData = await rotaResponse.json();
 
-    var lista = document.getElementById("resultado");
-    lista.innerHTML = "";
-
-    var passos = rotaData.features[0].properties.segments[0].steps;
-
-    for (var j = 0; j < passos.length; j++) {
-      var li = document.createElement("li");
-      li.textContent = passos[j].instruction;
-      lista.appendChild(li);
+    if (
+      !rotaData.features ||
+      rotaData.features.length === 0 ||
+      !rotaData.features[0].properties.segments ||
+      rotaData.features[0].properties.segments.length === 0
+    ) {
+      lista.innerHTML = "<li>Rota calculada, mas sem instruções detalhadas.</li>";
+      return;
     }
+
+    const passos = rotaData.features[0].properties.segments[0].steps || [];
+
+    if (passos.length === 0) {
+      lista.innerHTML = "<li>Rota calculada com sucesso.</li>";
+      return;
+    }
+
+    passos.forEach(passo => {
+      const li = document.createElement("li");
+      li.textContent = passo.instruction;
+      lista.appendChild(li);
+    });
 
   } catch (erro) {
     console.error(erro);
