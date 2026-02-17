@@ -2,52 +2,64 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <title>Rota de Visitas</title>
+  <title>Rota Certa</title>
 
   <style>
     body {
       font-family: Arial, Helvetica, sans-serif;
-      max-width: 600px;
+      max-width: 650px;
       margin: auto;
       padding: 20px;
       background: #f4f4f4;
     }
 
-    input, button {
-      width: 100%;
-      margin: 5px 0;
-      padding: 8px;
-      font-size: 16px;
+    h2 {
+      text-align: center;
     }
 
-    .endereco {
-      margin-bottom: 5px;
+    input, button {
+      width: 100%;
+      margin: 6px 0;
+      padding: 10px;
+      font-size: 16px;
     }
 
     button {
       cursor: pointer;
+    }
+
+    .info {
+      font-size: 14px;
+      color: #333;
+      margin-bottom: 10px;
     }
   </style>
 </head>
 
 <body>
 
-  <h2>Rota de Visitas</h2>
+  <h2>Rota Certa</h2>
 
-  <label for="qtd">Quantos endereços? (até 50)</label>
+  <!-- PONTO DE PARTIDA -->
+  <label for="origem"><strong>Ponto de partida</strong></label>
+  <input type="text" id="origem" placeholder="Ex: Osório - RS">
+
+  <hr>
+
+  <!-- QUANTIDADE DE PARADAS -->
+  <label for="qtd"><strong>Quantas paradas/destinos?</strong> (até 50)</label>
   <input type="number" id="qtd" min="1" max="50" value="2">
 
-  <button type="button" onclick="gerarCampos()">Gerar campos</button>
+  <button type="button" onclick="gerarCampos()">Gerar campos de destinos</button>
 
-  <!-- Aqui o JS vai inserir os inputs -->
   <div id="enderecos"></div>
 
   <button type="button" onclick="calcularRota()">Calcular rota</button>
 
-  <h3>Resultado:</h3>
+  <h3>Roteiro:</h3>
   <ol id="resultado"></ol>
 
-  <!-- Script SEMPRE no final -->
+  <!-- SCRIPT -->
   <script src="script.js"></script>
 
 </body>
