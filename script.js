@@ -3,7 +3,6 @@ console.log("Rota Fácil PRO carregado");
 let origemAtual = null;
 let destinosGlobais = [];
 let linkAtual = null;
-let rotaSelecionadaIndex = null;
 
 /* =========================
    LOCALIZAÇÃO GPS
@@ -86,6 +85,7 @@ async function geocodificar(txt) {
     `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(txt)}`
   );
   const d = await r.json();
+  if (!d.length) throw new Error("Endereço não encontrado");
   return { texto: txt, lat: +d[0].lat, lon: +d[0].lon };
 }
 
@@ -120,12 +120,17 @@ async function calcularRota() {
   if (!origemAtual)
     origemAtual = await geocodificar(document.getElementById("origem").value);
 
-  if (!destinosGlobais.length) {
-    destinosGlobais = [];
-    for (let i of document.querySelectorAll(".endereco"))
-      if (i.value) destinosGlobais.push(await geocodificar(i.value));
-  }
+  destinosGlobais = [];
+  for (let i of document.querySelectorAll(".endereco"))
+    if (i.value) destinosGlobais.push(await geocodificar(i.value));
 
+  gerarLink();
+}
+
+/* =========================
+   GERAR LINK MAPS
+   ========================= */
+function gerarLink() {
   const rota = ordenar(origemAtual, destinosGlobais);
 
   const o = encodeURIComponent(origemAtual.texto);
@@ -141,81 +146,64 @@ async function calcularRota() {
 }
 
 /* =========================
-   ADICIONAR PARADA À ROTA ATUAL
+   ADICIONAR PARADA NA ROTA
    ========================= */
-function adicionarParadaAtual() {
-  navigator.geolocation.getCurrentPosition(
-    pos => {
-      destinosGlobais.push({
-        texto: `${pos.coords.latitude},${pos.coords.longitude}`,
-        lat: pos.coords.latitude,
-        lon: pos.coords.longitude
-      });
-      calcularRota();
-    },
-    () => alert("Erro ao obter localização"),
-    { enableHighAccuracy: true }
-  );
+async function adicionarParada() {
+  const txt = document.getElementById("novaParada").value.trim();
+  if (!txt) {
+    alert("Digite o endereço da nova parada");
+    return;
+  }
+
+  const nova = await geocodificar(txt);
+  destinosGlobais.push(nova);
+  document.getElementById("novaParada").value = "";
+  gerarLink();
 }
 
 /* =========================
-   ROTAS SALVAS (DROPDOWN)
+   ROTAS SALVAS
    ========================= */
 function salvarRota() {
-  if (!linkAtual) {
-    alert("Calcule a rota antes de salvar");
-    return;
-  }
+  if (!linkAtual) return alert("Calcule a rota antes");
 
   const nome = prompt("Nome da rota:");
   if (!nome) return;
 
   const rotas = JSON.parse(localStorage.getItem("rotas") || "[]");
-  rotas.push({
-    nome,
-    origem: origemAtual,
-    destinos: destinosGlobais,
-    link: linkAtual
-  });
-
+  rotas.push({ nome, origem: origemAtual, destinos: destinosGlobais, link: linkAtual });
   localStorage.setItem("rotas", JSON.stringify(rotas));
   listarRotas();
 }
 
 function listarRotas() {
-  const select = document.getElementById("rotasSelect");
-  select.innerHTML = `<option value="">Selecione uma rota salva</option>`;
-
+  const sel = document.getElementById("rotasSelect");
+  sel.innerHTML = `<option value="">Selecione uma rota salva</option>`;
   const rotas = JSON.parse(localStorage.getItem("rotas") || "[]");
-  rotas.forEach((r, i) => {
-    select.innerHTML += `<option value="${i}">${r.nome}</option>`;
-  });
-}
-
-function selecionarRota() {
-  rotaSelecionadaIndex = document.getElementById("rotasSelect").value;
+  rotas.forEach((r,i) =>
+    sel.innerHTML += `<option value="${i}">${r.nome}</option>`
+  );
 }
 
 function abrirRotaSelecionada() {
-  if (rotaSelecionadaIndex === null || rotaSelecionadaIndex === "")
-    return alert("Selecione uma rota");
+  const i = document.getElementById("rotasSelect").value;
+  if (i === "") return alert("Selecione uma rota");
 
-  const r = JSON.parse(localStorage.getItem("rotas"))[rotaSelecionadaIndex];
-  window.open(r.link, "_blank");
-
+  const r = JSON.parse(localStorage.getItem("rotas"))[i];
   origemAtual = r.origem;
   destinosGlobais = r.destinos;
   linkAtual = r.link;
+
+  window.open(linkAtual, "_blank");
 }
 
 function excluirRotaSelecionada() {
-  if (rotaSelecionadaIndex === null || rotaSelecionadaIndex === "")
-    return alert("Selecione uma rota");
+  const i = document.getElementById("rotasSelect").value;
+  if (i === "") return alert("Selecione uma rota");
 
   const rotas = JSON.parse(localStorage.getItem("rotas"));
-  rotas.splice(rotaSelecionadaIndex, 1);
+  rotas.splice(i,1);
   localStorage.setItem("rotas", JSON.stringify(rotas));
-  rotaSelecionadaIndex = null;
   listarRotas();
 }
 
