@@ -1,84 +1,174 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-  <meta charset="UTF-8">
-  <title>Rota Fácil PRO</title>
+console.log("Rota Fácil PRO carregado");
 
-  <style>
-    body {
-      font-family: Arial, Helvetica, sans-serif;
-      max-width: 700px;
-      margin: auto;
-      padding: 20px;
-      background: #f4f4f4;
+let origemAtual = null;
+let destinosGlobais = [];
+
+/* =========================
+   Localização atual
+   ========================= */
+function usarLocalizacao() {
+  navigator.geolocation.getCurrentPosition(pos => {
+    origemAtual = {
+      lat: pos.coords.latitude,
+      lon: pos.coords.longitude,
+      texto: `${pos.coords.latitude},${pos.coords.longitude}`
+    };
+    alert("Localização atual definida como ponto de partida");
+  }, () => {
+    alert("Não foi possível obter a localização");
+  });
+}
+
+/* =========================
+   Gerar campos
+   ========================= */
+function gerarCampos() {
+  const qtd = parseInt(document.getElementById("qtd").value);
+  const div = document.getElementById("enderecos");
+  div.innerHTML = "";
+  destinosGlobais = [];
+
+  for (let i = 1; i <= qtd; i++) {
+    const input = document.createElement("input");
+    input.placeholder = "Destino " + i;
+    div.appendChild(input);
+  }
+}
+
+/* =========================
+   Geocodificação
+   ========================= */
+async function geocodificar(texto) {
+  const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(texto)}`;
+  const res = await fetch(url);
+  const data = await res.json();
+
+  if (!data.length) throw new Error("Endereço não encontrado");
+
+  return {
+    texto,
+    lat: parseFloat(data[0].lat),
+    lon: parseFloat(data[0].lon)
+  };
+}
+
+/* =========================
+   Distância
+   ========================= */
+function distancia(a, b) {
+  const R = 6371;
+  const dLat = (b.lat - a.lat) * Math.PI / 180;
+  const dLon = (b.lon - a.lon) * Math.PI / 180;
+
+  const x =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(a.lat * Math.PI / 180) *
+    Math.cos(b.lat * Math.PI / 180) *
+    Math.sin(dLon / 2) ** 2;
+
+  return R * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x));
+}
+
+/* =========================
+   Ordenar destinos
+   ========================= */
+function ordenar(origem, destinos) {
+  const rota = [];
+  let atual = origem;
+  let restantes = [...destinos];
+
+  while (restantes.length) {
+    let idx = 0;
+    let menor = distancia(atual, restantes[0]);
+
+    for (let i = 1; i < restantes.length; i++) {
+      const d = distancia(atual, restantes[i]);
+      if (d < menor) {
+        menor = d;
+        idx = i;
+      }
     }
 
-    h2 {
-      text-align: center;
+    atual = restantes[idx];
+    rota.push(restantes.splice(idx, 1)[0]);
+  }
+
+  return rota;
+}
+
+/* =========================
+   Calcular rota
+   ========================= */
+async function calcularRota() {
+  const lista = document.getElementById("resultado");
+  lista.innerHTML = "";
+
+  if (!origemAtual) {
+    const texto = document.getElementById("origem").value.trim();
+    origemAtual = await geocodificar(texto);
+  }
+
+  const inputs = document.querySelectorAll("#enderecos input");
+  destinosGlobais = [];
+
+  for (let input of inputs) {
+    if (input.value.trim()) {
+      destinosGlobais.push(await geocodificar(input.value.trim()));
     }
+  }
 
-    input, button, select {
-      width: 100%;
-      margin: 6px 0;
-      padding: 10px;
-      font-size: 16px;
-    }
+  const rota = ordenar(origemAtual, destinosGlobais);
 
-    button {
-      cursor: pointer;
-    }
+  const origin = encodeURIComponent(origemAtual.texto);
+  const destination = encodeURIComponent(rota[rota.length - 1].texto);
+  const waypoints = rota.slice(0, -1).map(d => encodeURIComponent(d.texto)).join("|");
 
-    .box {
-      background: #fff;
-      padding: 15px;
-      margin-bottom: 15px;
-      border-radius: 6px;
-    }
+  let url = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}&travelmode=driving`;
+  if (waypoints) url += `&waypoints=${waypoints}`;
 
-    .cliente {
-      cursor: pointer;
-      color: blue;
-      text-decoration: underline;
-      margin: 4px 0;
-    }
-  </style>
-</head>
+  lista.innerHTML = `<li><a href="${url}" target="_blank">🚗 Abrir rota no Google Maps</a></li>`;
+}
 
-<body>
+/* =========================
+   Adicionar parada atual
+   ========================= */
+function adicionarParadaAtual() {
+  navigator.geolocation.getCurrentPosition(pos => {
+    destinosGlobais.push({
+      texto: `${pos.coords.latitude},${pos.coords.longitude}`,
+      lat: pos.coords.latitude,
+      lon: pos.coords.longitude
+    });
+    calcularRota();
+  });
+}
 
-<h2>🚗 Rota Fácil PRO</h2>
+/* =========================
+   Clientes (localStorage)
+   ========================= */
+function salvarCliente() {
+  const nome = document.getElementById("nomeCliente").value;
+  const endereco = document.getElementById("enderecoCliente").value;
+  if (!nome || !endereco) return;
 
-<div class="box">
-  <strong>Ponto de partida</strong>
-  <input type="text" id="origem" placeholder="Digite o ponto de partida">
-  <button onclick="usarLocalizacao()">📍 Usar minha localização</button>
-</div>
+  const clientes = JSON.parse(localStorage.getItem("clientes") || "[]");
+  clientes.push({ nome, endereco });
+  localStorage.setItem("clientes", JSON.stringify(clientes));
+  listarClientes();
+}
 
-<div class="box">
-  <strong>Quantas paradas?</strong>
-  <input type="number" id="qtd" min="1" max="10" value="2">
-  <button onclick="gerarCampos()">Gerar destinos</button>
-  <div id="enderecos"></div>
-</div>
+function listarClientes() {
+  const div = document.getElementById("listaClientes");
+  const clientes = JSON.parse(localStorage.getItem("clientes") || "[]");
+  div.innerHTML = "";
 
-<div class="box">
-  <button onclick="calcularRota()">Calcular rota</button>
-  <button onclick="adicionarParadaAtual()">➕ Adicionar parada agora</button>
-</div>
+  clientes.forEach(c => {
+    const p = document.createElement("div");
+    p.className = "cliente";
+    p.textContent = `${c.nome} – ${c.endereco}`;
+    p.onclick = () => document.getElementById("origem").value = c.endereco;
+    div.appendChild(p);
+  });
+}
 
-<div class="box">
-  <h3>Roteiro</h3>
-  <ol id="resultado"></ol>
-</div>
-
-<div class="box">
-  <h3>📁 Clientes salvos</h3>
-  <input type="text" id="nomeCliente" placeholder="Nome do cliente">
-  <input type="text" id="enderecoCliente" placeholder="Endereço do cliente">
-  <button onclick="salvarCliente()">Salvar cliente</button>
-  <div id="listaClientes"></div>
-</div>
-
-<script src="script.js"></script>
-</body>
-</html>
+listarClientes();
