@@ -4,7 +4,7 @@ let origemAtual = null;
 let destinosGlobais = [];
 
 /* =========================
-   LOCALIZAÇÃO GPS PRECISA
+   LOCALIZAÇÃO GPS
    ========================= */
 function usarLocalizacao() {
   navigator.geolocation.getCurrentPosition(
@@ -14,13 +14,11 @@ function usarLocalizacao() {
         lon: pos.coords.longitude,
         texto: `${pos.coords.latitude},${pos.coords.longitude}`
       };
-
       document.getElementById("infoLocalizacao").innerText =
-        "📍 GPS ativo (alta precisão)";
-
+        "📍 GPS ativo";
     },
-    err => alert("Erro ao obter localização"),
-    { enableHighAccuracy: true, timeout: 10000 }
+    () => alert("Erro ao obter localização"),
+    { enableHighAccuracy: true }
   );
 }
 
@@ -33,25 +31,22 @@ function getClientes() {
 
 function salvarClientes() {
   const clientes = getClientes();
-  document.querySelectorAll(".destino").forEach(b => {
-    const nome = b.querySelector(".nome").value.trim();
-    const endereco = b.querySelector(".endereco").value.trim();
+  document.querySelectorAll(".destino").forEach(d => {
+    const nome = d.querySelector(".nome").value.trim();
+    const endereco = d.querySelector(".endereco").value.trim();
     if (!endereco) return;
-
-    if (!clientes.some(c => c.endereco === endereco)) {
+    if (!clientes.some(c => c.endereco === endereco))
       clientes.push({ nome, endereco });
-    }
   });
-
   localStorage.setItem("clientes", JSON.stringify(clientes));
   alert("Clientes salvos");
 }
 
 /* =========================
-   GERAR CAMPOS
+   CAMPOS
    ========================= */
-function gerarCampos() {
-  const qtd = +document.getElementById("qtd").value;
+function gerarCampos(qtdOverride = null, valores = []) {
+  const qtd = qtdOverride ?? +document.getElementById("qtd").value;
   const div = document.getElementById("enderecos");
   div.innerHTML = "";
 
@@ -62,20 +57,21 @@ function gerarCampos() {
     d.className = "destino";
 
     const sel = document.createElement("select");
-    sel.innerHTML = `<option value="">Selecionar cliente salvo</option>`;
-    clientes.forEach(c => {
-      sel.innerHTML += `<option value="${c.endereco}">${c.nome || c.endereco}</option>`;
-    });
+    sel.innerHTML = `<option value="">Cliente salvo</option>`;
+    clientes.forEach(c =>
+      sel.innerHTML += `<option value="${c.endereco}">${c.nome || c.endereco}</option>`
+    );
 
     const end = document.createElement("input");
     end.className = "endereco";
     end.placeholder = "Endereço";
+    if (valores[i]) end.value = valores[i];
 
     sel.onchange = () => end.value = sel.value;
 
     const nome = document.createElement("input");
     nome.className = "nome";
-    nome.placeholder = "Nome do cliente (opcional)";
+    nome.placeholder = "Nome do cliente";
 
     d.append(sel, end, nome);
     div.appendChild(d);
@@ -86,10 +82,10 @@ function gerarCampos() {
    GEO + DISTÂNCIA
    ========================= */
 async function geocodificar(txt) {
-  const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(txt)}`;
-  const r = await fetch(url);
+  const r = await fetch(
+    `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(txt)}`
+  );
   const d = await r.json();
-  if (!d.length) throw new Error("Endereço não encontrado");
   return { texto: txt, lat: +d[0].lat, lon: +d[0].lon };
 }
 
@@ -99,7 +95,8 @@ function distancia(a, b) {
   const dLon = (b.lon - a.lon) * Math.PI / 180;
   const x =
     Math.sin(dLat/2)**2 +
-    Math.cos(a.lat*Math.PI/180)*Math.cos(b.lat*Math.PI/180)*
+    Math.cos(a.lat*Math.PI/180) *
+    Math.cos(b.lat*Math.PI/180) *
     Math.sin(dLon/2)**2;
   return R * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1-x));
 }
@@ -123,9 +120,10 @@ async function calcularRota() {
   if (!origemAtual)
     origemAtual = await geocodificar(document.getElementById("origem").value);
 
-  destinosGlobais = [];
-  for (let i of document.querySelectorAll(".endereco"))
-    if (i.value) destinosGlobais.push(await geocodificar(i.value));
+  if (!destinosGlobais.length) {
+    for (let i of document.querySelectorAll(".endereco"))
+      if (i.value) destinosGlobais.push(await geocodificar(i.value));
+  }
 
   const rota = ordenar(origemAtual, destinosGlobais);
 
@@ -141,10 +139,10 @@ async function calcularRota() {
 }
 
 /* =========================
-   SALVAR / CARREGAR ROTAS
+   ROTAS SALVAS
    ========================= */
 function salvarRota() {
-  const nome = prompt("Nome da rota");
+  const nome = prompt("Nome da rota:");
   if (!nome) return;
 
   const rotas = JSON.parse(localStorage.getItem("rotas") || "[]");
@@ -155,18 +153,16 @@ function salvarRota() {
 
 function listarRotas() {
   const div = document.getElementById("listaRotas");
-  const rotas = JSON.parse(localStorage.getItem("rotas") || "[]");
   div.innerHTML = "";
+  const rotas = JSON.parse(localStorage.getItem("rotas") || "[]");
 
   rotas.forEach((r, i) => {
-    const d = document.createElement("div");
-    d.className = "rotaSalva";
-    d.innerHTML = `
-      <strong>${r.nome}</strong>
-      <button onclick="iniciarRota(${i})">▶ Iniciar</button>
-      <button onclick="excluirRota(${i})">🗑️</button>
-    `;
-    div.appendChild(d);
+    div.innerHTML += `
+      <div class="rotaSalva">
+        <strong>${r.nome}</strong>
+        <button onclick="iniciarRota(${i})">▶ Iniciar</button>
+        <button onclick="excluirRota(${i})">🗑️</button>
+      </div>`;
   });
 }
 
@@ -174,6 +170,8 @@ function iniciarRota(i) {
   const r = JSON.parse(localStorage.getItem("rotas"))[i];
   origemAtual = r.origem;
   destinosGlobais = r.destinos;
+  document.getElementById("qtd").value = destinosGlobais.length;
+  gerarCampos(destinosGlobais.length, destinosGlobais.map(d => d.texto));
   calcularRota();
 }
 
