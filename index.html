@@ -41,7 +41,7 @@
 
 <body>
 
-<h2>🚗 Rota Fácil PRO1</h2>
+<h2>🚗 Rota Fácil PRO</h2>
 
 <div class="box">
   <strong>Ponto de partida</strong>
@@ -60,7 +60,11 @@
 
 <div class="box">
   <button onclick="calcularRota()">Calcular rota</button>
-  <button onclick="adicionarParadaAtual()">➕ Adicionar parada agora</button>
+
+  <strong>Adicionar nova parada durante a rota</strong>
+  <input type="text" id="novaParada" placeholder="Digite o endereço da nova parada">
+  <button onclick="adicionarParada()">➕ Adicionar parada agora</button>
+
   <button onclick="salvarRota()">⭐ Salvar esta rota</button>
 </div>
 
@@ -71,7 +75,7 @@
 
 <div class="box">
   <h3>📂 Rotas salvas</h3>
-  <select id="rotasSelect" onchange="selecionarRota()">
+  <select id="rotasSelect">
     <option value="">Selecione uma rota salva</option>
   </select>
   <button onclick="abrirRotaSelecionada()">🚗 Abrir rota</button>
