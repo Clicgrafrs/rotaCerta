@@ -2,12 +2,12 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <title>Rota Fácil</title>
+  <title>Rota Fácil PRO</title>
 
   <style>
     body {
       font-family: Arial, Helvetica, sans-serif;
-      max-width: 650px;
+      max-width: 700px;
       margin: auto;
       padding: 20px;
       background: #f4f4f4;
@@ -17,7 +17,7 @@
       text-align: center;
     }
 
-    input, button {
+    input, button, select {
       width: 100%;
       margin: 6px 0;
       padding: 10px;
@@ -28,43 +28,57 @@
       cursor: pointer;
     }
 
-    .info {
-      font-size: 14px;
-      color: #333;
-      margin-bottom: 10px;
+    .box {
+      background: #fff;
+      padding: 15px;
+      margin-bottom: 15px;
+      border-radius: 6px;
+    }
+
+    .cliente {
+      cursor: pointer;
+      color: blue;
+      text-decoration: underline;
+      margin: 4px 0;
     }
   </style>
 </head>
 
 <body>
 
-  <h2>Rota Fácil</h2>
+<h2>🚗 Rota Fácil PRO</h2>
 
-  <!-- PONTO DE PARTIDA -->
-  <label for="origem"><strong>Ponto de partida</strong></label>
-  <input type="text" id="origem" placeholder="Ex: Osório - RS">
+<div class="box">
+  <strong>Ponto de partida</strong>
+  <input type="text" id="origem" placeholder="Digite o ponto de partida">
+  <button onclick="usarLocalizacao()">📍 Usar minha localização</button>
+</div>
 
-  <hr>
-
-  <!-- QUANTIDADE DE PARADAS -->
-  <label for="qtd"><strong>Quantas paradas/destinos?</strong> (até 10)</label>
+<div class="box">
+  <strong>Quantas paradas?</strong>
   <input type="number" id="qtd" min="1" max="10" value="2">
-
-  <button type="button" onclick="gerarCampos()">Gerar campos de destinos</button>
-
+  <button onclick="gerarCampos()">Gerar destinos</button>
   <div id="enderecos"></div>
+</div>
 
-  <button type="button" onclick="calcularRota()">Calcular rota</button>
+<div class="box">
+  <button onclick="calcularRota()">Calcular rota</button>
+  <button onclick="adicionarParadaAtual()">➕ Adicionar parada agora</button>
+</div>
 
-  <h3>Roteiro:</h3>
+<div class="box">
+  <h3>Roteiro</h3>
   <ol id="resultado"></ol>
-  
-  <div><br><br><br></div>
-  
- <h4>Desenvolvido por: Rafael Ferreira</h4>
-  
-  <!-- SCRIPT -->
-  <script src="script.js"></script>
+</div>
 
+<div class="box">
+  <h3>📁 Clientes salvos</h3>
+  <input type="text" id="nomeCliente" placeholder="Nome do cliente">
+  <input type="text" id="enderecoCliente" placeholder="Endereço do cliente">
+  <button onclick="salvarCliente()">Salvar cliente</button>
+  <div id="listaClientes"></div>
+</div>
+
+<script src="script.js"></script>
 </body>
 </html>
