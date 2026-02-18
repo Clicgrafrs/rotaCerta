@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <title>Rota Fácil PRO1</title>
+  <title>Rota Fácil PRO</title>
 
   <style>
     body {
@@ -35,11 +35,6 @@
       border-bottom: 1px solid #ddd;
       padding-bottom: 10px;
       margin-bottom: 10px;
-    }
-
-    .rotaSalva {
-      border-bottom: 1px dashed #ccc;
-      padding: 6px 0;
     }
   </style>
 </head>
@@ -76,7 +71,11 @@
 
 <div class="box">
   <h3>📂 Rotas salvas</h3>
-  <div id="listaRotas"></div>
+  <select id="rotasSelect" onchange="selecionarRota()">
+    <option value="">Selecione uma rota salva</option>
+  </select>
+  <button onclick="abrirRotaSelecionada()">🚗 Abrir rota</button>
+  <button onclick="excluirRotaSelecionada()">🗑️ Excluir rota</button>
 </div>
 
 <script src="script.js"></script>
