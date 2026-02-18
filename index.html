@@ -41,7 +41,7 @@
 
 <body>
 
-<h2>🚗 Rota Fácil PRO2</h2>
+<h2>🚗 Rota Fácil PRO3</h2>
 
 <div class="box">
   <strong>Ponto de partida</strong>
@@ -55,31 +55,25 @@
   <input type="number" id="qtd" min="1" max="10" value="2">
   <button onclick="gerarCampos()">Gerar destinos</button>
   <div id="enderecos"></div>
-  <button onclick="salvarClientes()">💾 Salvar endereços/clientes</button>
 </div>
 
 <div class="box">
   <button onclick="calcularRota()">Calcular rota</button>
-
-  <strong>Adicionar nova parada durante a rota</strong>
-  <input type="text" id="novaParada" placeholder="Digite o endereço da nova parada">
-  <button onclick="adicionarParada()">➕ Adicionar parada agora</button>
-
-  <button onclick="salvarRota()">⭐ Salvar esta rota</button>
+  <button onclick="salvarRota()">⭐ Salvar rota</button>
 </div>
 
 <div class="box">
-  <h3>Roteiro</h3>
-  <ol id="resultado"></ol>
+  <strong>➕ Adicionar parada à rota ativa</strong>
+  <input type="text" id="novaParada" placeholder="Digite o novo destino">
+  <button onclick="adicionarParada()">Adicionar parada</button>
 </div>
 
 <div class="box">
   <h3>📂 Rotas salvas</h3>
-  <select id="rotasSelect">
-    <option value="">Selecione uma rota salva</option>
+  <select id="rotasDropdown" onchange="abrirRotaSelecionada()">
+    <option value="">Selecione uma rota</option>
   </select>
-  <button onclick="abrirRotaSelecionada()">🚗 Abrir rota</button>
-  <button onclick="excluirRotaSelecionada()">🗑️ Excluir rota</button>
+  <button onclick="excluirRota()">🗑 Excluir rota selecionada</button>
 </div>
 
 <script src="script.js"></script>
