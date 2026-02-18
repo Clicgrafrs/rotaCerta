@@ -1,83 +1,64 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <title>Rota Fácil PRO</title>
+<meta charset="UTF-8">
+<title>Roteirizador de Clientes</title>
 
-  <style>
-    body {
-      font-family: Arial;
-      max-width: 760px;
-      margin: auto;
-      padding: 20px;
-      background: #f4f4f4;
-    }
-
-    h2 { text-align: center; }
-
-    input, button, select {
-      width: 100%;
-      margin: 6px 0;
-      padding: 10px;
-      font-size: 15px;
-    }
-
-    button { cursor: pointer; }
-
-    .box {
-      background: #fff;
-      padding: 15px;
-      margin-bottom: 15px;
-      border-radius: 6px;
-    }
-
-    .destino {
-      border-bottom: 1px solid #ddd;
-      margin-bottom: 10px;
-      padding-bottom: 10px;
-    }
-
-    .rota-salva {
-      margin: 5px 0;
-    }
-  </style>
+<style>
+body {
+    font-family: Arial, sans-serif;
+    padding: 15px;
+}
+input, button, select {
+    padding: 8px;
+    margin: 5px 0;
+    width: 100%;
+}
+.destino {
+    border: 1px solid #ccc;
+    padding: 10px;
+    margin-bottom: 8px;
+}
+#map {
+    width: 100%;
+    height: 350px;
+    margin-top: 10px;
+}
+</style>
 </head>
 
 <body>
 
-<h2>🚗 Rota Fácil PRO</h2>
+<h2>Roteirizador de Clientes</h2>
 
-<div class="box">
-  <strong>Ponto de partida</strong>
-  <input type="text" id="origem" placeholder="Digite o ponto de partida">
-  <button onclick="usarLocalizacao()">📍 Usar minha localização</button>
-  <div id="precisao"></div>
-</div>
+<button onclick="usarLocalizacao()">📍 Usar localização atual</button>
+<input type="text" id="origem" placeholder="Endereço de partida">
 
-<div class="box">
-  <strong>Quantas paradas?</strong>
-  <input type="number" id="qtd" min="1" max="10" value="2">
-  <button onclick="gerarCampos()">Gerar destinos</button>
-  <div id="enderecos"></div>
-  <button onclick="salvarClientes()">💾 Salvar endereços</button>
-</div>
+<hr>
 
-<div class="box">
-  <button onclick="calcularRota()">Calcular rota</button>
-  <button onclick="adicionarParadaAtual()">➕ Adicionar parada agora</button>
-  <button onclick="salvarRota()">⭐ Salvar esta rota</button>
-</div>
+<h3>Destinos</h3>
+<div id="destinos"></div>
 
-<div class="box">
-  <h3>📂 Rotas salvas</h3>
-  <div id="listaRotas"></div>
-</div>
+<button onclick="addDestino()">➕ Adicionar parada</button>
+<button onclick="criarRota()">🧭 Criar rota</button>
 
-<div class="box">
-  <h3>Roteiro</h3>
-  <ol id="resultado"></ol>
-</div>
+<hr>
 
+<h3>Salvar</h3>
+<input type="text" id="nomeRota" placeholder="Nome da rota">
+<button onclick="salvarRota()">💾 Salvar rota</button>
+
+<hr>
+
+<h3>Rotas salvas</h3>
+<select id="rotasSalvas" onchange="carregarRota()">
+<option value="">Selecione uma rota</option>
+</select>
+
+<div id="map"></div>
+
+<script src="https://maps.googleapis.com/maps/api/js?key=SUA_CHAVE_AQUI&libraries=places"></script>
 <script src="script.js"></script>
+
 </body>
 </html>
