@@ -7,15 +7,13 @@
   <style>
     body {
       font-family: Arial;
-      max-width: 750px;
+      max-width: 760px;
       margin: auto;
       padding: 20px;
       background: #f4f4f4;
     }
 
-    h2 {
-      text-align: center;
-    }
+    h2 { text-align: center; }
 
     input, button, select {
       width: 100%;
@@ -24,9 +22,7 @@
       font-size: 15px;
     }
 
-    button {
-      cursor: pointer;
-    }
+    button { cursor: pointer; }
 
     .box {
       background: #fff;
@@ -37,8 +33,12 @@
 
     .destino {
       border-bottom: 1px solid #ddd;
-      padding-bottom: 10px;
       margin-bottom: 10px;
+      padding-bottom: 10px;
+    }
+
+    .rota-salva {
+      margin: 5px 0;
     }
   </style>
 </head>
@@ -51,6 +51,7 @@
   <strong>Ponto de partida</strong>
   <input type="text" id="origem" placeholder="Digite o ponto de partida">
   <button onclick="usarLocalizacao()">📍 Usar minha localização</button>
+  <div id="precisao"></div>
 </div>
 
 <div class="box">
@@ -58,13 +59,18 @@
   <input type="number" id="qtd" min="1" max="10" value="2">
   <button onclick="gerarCampos()">Gerar destinos</button>
   <div id="enderecos"></div>
-  <button onclick="salvarClientes()">💾 Salvar endereços/clientes</button>
+  <button onclick="salvarClientes()">💾 Salvar endereços</button>
 </div>
 
 <div class="box">
   <button onclick="calcularRota()">Calcular rota</button>
   <button onclick="adicionarParadaAtual()">➕ Adicionar parada agora</button>
   <button onclick="salvarRota()">⭐ Salvar esta rota</button>
+</div>
+
+<div class="box">
+  <h3>📂 Rotas salvas</h3>
+  <div id="listaRotas"></div>
 </div>
 
 <div class="box">
