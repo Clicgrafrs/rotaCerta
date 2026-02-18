@@ -6,8 +6,8 @@
 
   <style>
     body {
-      font-family: Arial, Helvetica, sans-serif;
-      max-width: 700px;
+      font-family: Arial;
+      max-width: 750px;
       margin: auto;
       padding: 20px;
       background: #f4f4f4;
@@ -21,7 +21,7 @@
       width: 100%;
       margin: 6px 0;
       padding: 10px;
-      font-size: 16px;
+      font-size: 15px;
     }
 
     button {
@@ -35,11 +35,10 @@
       border-radius: 6px;
     }
 
-    .cliente {
-      cursor: pointer;
-      color: blue;
-      text-decoration: underline;
-      margin: 4px 0;
+    .destino {
+      border-bottom: 1px solid #ddd;
+      padding-bottom: 10px;
+      margin-bottom: 10px;
     }
   </style>
 </head>
@@ -59,24 +58,18 @@
   <input type="number" id="qtd" min="1" max="10" value="2">
   <button onclick="gerarCampos()">Gerar destinos</button>
   <div id="enderecos"></div>
+  <button onclick="salvarClientes()">💾 Salvar endereços/clientes</button>
 </div>
 
 <div class="box">
   <button onclick="calcularRota()">Calcular rota</button>
   <button onclick="adicionarParadaAtual()">➕ Adicionar parada agora</button>
+  <button onclick="salvarRota()">⭐ Salvar esta rota</button>
 </div>
 
 <div class="box">
   <h3>Roteiro</h3>
   <ol id="resultado"></ol>
-</div>
-
-<div class="box">
-  <h3>📁 Clientes salvos</h3>
-  <input type="text" id="nomeCliente" placeholder="Nome do cliente">
-  <input type="text" id="enderecoCliente" placeholder="Endereço do cliente">
-  <button onclick="salvarCliente()">Salvar cliente</button>
-  <div id="listaClientes"></div>
 </div>
 
 <script src="script.js"></script>
