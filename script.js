@@ -2,6 +2,7 @@ console.log("Rota Fácil PRO carregado");
 
 let origemAtual = null;
 let destinosGlobais = [];
+let linkAtual = null;
 
 /* =========================
    LOCALIZAÇÃO GPS
@@ -14,8 +15,7 @@ function usarLocalizacao() {
         lon: pos.coords.longitude,
         texto: `${pos.coords.latitude},${pos.coords.longitude}`
       };
-      document.getElementById("infoLocalizacao").innerText =
-        "📍 GPS ativo";
+      document.getElementById("infoLocalizacao").innerText = "📍 Localização ativa";
     },
     () => alert("Erro ao obter localização"),
     { enableHighAccuracy: true }
@@ -43,10 +43,10 @@ function salvarClientes() {
 }
 
 /* =========================
-   CAMPOS
+   CAMPOS DE DESTINO
    ========================= */
-function gerarCampos(qtdOverride = null, valores = []) {
-  const qtd = qtdOverride ?? +document.getElementById("qtd").value;
+function gerarCampos() {
+  const qtd = +document.getElementById("qtd").value;
   const div = document.getElementById("enderecos");
   div.innerHTML = "";
 
@@ -65,7 +65,6 @@ function gerarCampos(qtdOverride = null, valores = []) {
     const end = document.createElement("input");
     end.className = "endereco";
     end.placeholder = "Endereço";
-    if (valores[i]) end.value = valores[i];
 
     sel.onchange = () => end.value = sel.value;
 
@@ -79,7 +78,7 @@ function gerarCampos(qtdOverride = null, valores = []) {
 }
 
 /* =========================
-   GEO + DISTÂNCIA
+   GEO / DISTÂNCIA
    ========================= */
 async function geocodificar(txt) {
   const r = await fetch(
@@ -114,13 +113,14 @@ function ordenar(origem, destinos) {
 }
 
 /* =========================
-   ROTA
+   CALCULAR ROTA
    ========================= */
 async function calcularRota() {
   if (!origemAtual)
     origemAtual = await geocodificar(document.getElementById("origem").value);
 
   if (!destinosGlobais.length) {
+    destinosGlobais = [];
     for (let i of document.querySelectorAll(".endereco"))
       if (i.value) destinosGlobais.push(await geocodificar(i.value));
   }
@@ -131,22 +131,46 @@ async function calcularRota() {
   const d = encodeURIComponent(rota.at(-1).texto);
   const w = rota.slice(0,-1).map(r => encodeURIComponent(r.texto)).join("|");
 
-  let url = `https://www.google.com/maps/dir/?api=1&origin=${o}&destination=${d}&travelmode=driving`;
-  if (w) url += `&waypoints=${w}`;
+  linkAtual =
+    `https://www.google.com/maps/dir/?api=1&origin=${o}&destination=${d}&travelmode=driving` +
+    (w ? `&waypoints=${w}` : "");
 
   document.getElementById("resultado").innerHTML =
-    `<li><a href="${url}" target="_blank">🚗 Abrir rota no Google Maps</a></li>`;
+    `<li><a href="${linkAtual}" target="_blank">🚗 Abrir rota no Google Maps</a></li>`;
 }
 
 /* =========================
-   ROTAS SALVAS
+   ADICIONAR PARADA EM TEMPO REAL
+   ========================= */
+function adicionarParadaAtual() {
+  navigator.geolocation.getCurrentPosition(
+    pos => {
+      destinosGlobais.push({
+        texto: `${pos.coords.latitude},${pos.coords.longitude}`,
+        lat: pos.coords.latitude,
+        lon: pos.coords.longitude
+      });
+      calcularRota();
+    },
+    () => alert("Erro ao obter localização"),
+    { enableHighAccuracy: true }
+  );
+}
+
+/* =========================
+   SALVAR / CARREGAR ROTAS
    ========================= */
 function salvarRota() {
+  if (!linkAtual) {
+    alert("Calcule a rota antes de salvar");
+    return;
+  }
+
   const nome = prompt("Nome da rota:");
   if (!nome) return;
 
   const rotas = JSON.parse(localStorage.getItem("rotas") || "[]");
-  rotas.push({ nome, origem: origemAtual, destinos: destinosGlobais });
+  rotas.push({ nome, link: linkAtual });
   localStorage.setItem("rotas", JSON.stringify(rotas));
   listarRotas();
 }
@@ -154,25 +178,17 @@ function salvarRota() {
 function listarRotas() {
   const div = document.getElementById("listaRotas");
   div.innerHTML = "";
+
   const rotas = JSON.parse(localStorage.getItem("rotas") || "[]");
 
   rotas.forEach((r, i) => {
     div.innerHTML += `
       <div class="rotaSalva">
-        <strong>${r.nome}</strong>
-        <button onclick="iniciarRota(${i})">▶ Iniciar</button>
+        <strong>${r.nome}</strong><br>
+        <button onclick="window.open('${r.link}', '_blank')">🚗 Abrir rota</button>
         <button onclick="excluirRota(${i})">🗑️</button>
       </div>`;
   });
-}
-
-function iniciarRota(i) {
-  const r = JSON.parse(localStorage.getItem("rotas"))[i];
-  origemAtual = r.origem;
-  destinosGlobais = r.destinos;
-  document.getElementById("qtd").value = destinosGlobais.length;
-  gerarCampos(destinosGlobais.length, destinosGlobais.map(d => d.texto));
-  calcularRota();
 }
 
 function excluirRota(i) {
