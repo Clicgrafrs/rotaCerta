@@ -3,6 +3,7 @@ console.log("Rota Fácil PRO carregado");
 let origemAtual = null;
 let destinosGlobais = [];
 let linkAtual = null;
+let rotaSelecionadaIndex = null;
 
 /* =========================
    LOCALIZAÇÃO GPS
@@ -32,8 +33,8 @@ function getClientes() {
 function salvarClientes() {
   const clientes = getClientes();
   document.querySelectorAll(".destino").forEach(d => {
-    const nome = d.querySelector(".nome").value.trim();
-    const endereco = d.querySelector(".endereco").value.trim();
+    const nome = d.querySelector(".nome")?.value.trim();
+    const endereco = d.querySelector(".endereco")?.value.trim();
     if (!endereco) return;
     if (!clientes.some(c => c.endereco === endereco))
       clientes.push({ nome, endereco });
@@ -43,7 +44,7 @@ function salvarClientes() {
 }
 
 /* =========================
-   CAMPOS DE DESTINO
+   GERAR CAMPOS
    ========================= */
 function gerarCampos() {
   const qtd = +document.getElementById("qtd").value;
@@ -113,7 +114,7 @@ function ordenar(origem, destinos) {
 }
 
 /* =========================
-   CALCULAR ROTA
+   CALCULAR / RECALCULAR ROTA
    ========================= */
 async function calcularRota() {
   if (!origemAtual)
@@ -140,7 +141,7 @@ async function calcularRota() {
 }
 
 /* =========================
-   ADICIONAR PARADA EM TEMPO REAL
+   ADICIONAR PARADA À ROTA ATUAL
    ========================= */
 function adicionarParadaAtual() {
   navigator.geolocation.getCurrentPosition(
@@ -158,7 +159,7 @@ function adicionarParadaAtual() {
 }
 
 /* =========================
-   SALVAR / CARREGAR ROTAS
+   ROTAS SALVAS (DROPDOWN)
    ========================= */
 function salvarRota() {
   if (!linkAtual) {
@@ -170,31 +171,51 @@ function salvarRota() {
   if (!nome) return;
 
   const rotas = JSON.parse(localStorage.getItem("rotas") || "[]");
-  rotas.push({ nome, link: linkAtual });
+  rotas.push({
+    nome,
+    origem: origemAtual,
+    destinos: destinosGlobais,
+    link: linkAtual
+  });
+
   localStorage.setItem("rotas", JSON.stringify(rotas));
   listarRotas();
 }
 
 function listarRotas() {
-  const div = document.getElementById("listaRotas");
-  div.innerHTML = "";
+  const select = document.getElementById("rotasSelect");
+  select.innerHTML = `<option value="">Selecione uma rota salva</option>`;
 
   const rotas = JSON.parse(localStorage.getItem("rotas") || "[]");
-
   rotas.forEach((r, i) => {
-    div.innerHTML += `
-      <div class="rotaSalva">
-        <strong>${r.nome}</strong><br>
-        <button onclick="window.open('${r.link}', '_blank')">🚗 Abrir rota</button>
-        <button onclick="excluirRota(${i})">🗑️</button>
-      </div>`;
+    select.innerHTML += `<option value="${i}">${r.nome}</option>`;
   });
 }
 
-function excluirRota(i) {
-  const r = JSON.parse(localStorage.getItem("rotas"));
-  r.splice(i,1);
-  localStorage.setItem("rotas", JSON.stringify(r));
+function selecionarRota() {
+  rotaSelecionadaIndex = document.getElementById("rotasSelect").value;
+}
+
+function abrirRotaSelecionada() {
+  if (rotaSelecionadaIndex === null || rotaSelecionadaIndex === "")
+    return alert("Selecione uma rota");
+
+  const r = JSON.parse(localStorage.getItem("rotas"))[rotaSelecionadaIndex];
+  window.open(r.link, "_blank");
+
+  origemAtual = r.origem;
+  destinosGlobais = r.destinos;
+  linkAtual = r.link;
+}
+
+function excluirRotaSelecionada() {
+  if (rotaSelecionadaIndex === null || rotaSelecionadaIndex === "")
+    return alert("Selecione uma rota");
+
+  const rotas = JSON.parse(localStorage.getItem("rotas"));
+  rotas.splice(rotaSelecionadaIndex, 1);
+  localStorage.setItem("rotas", JSON.stringify(rotas));
+  rotaSelecionadaIndex = null;
   listarRotas();
 }
 
