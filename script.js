@@ -1,14 +1,14 @@
-let rotaAtual = null;
-let origemAtual = null;
+let rotaAtiva = null;
+let origemAtual = "";
 
 function gerarCampos() {
   const qtd = document.getElementById("qtd").value;
   const div = document.getElementById("enderecos");
   div.innerHTML = "";
 
-  for (let i = 0; i < qtd; i++) {
+  for (let i = 1; i <= qtd; i++) {
     const input = document.createElement("input");
-    input.placeholder = `Destino ${i + 1}`;
+    input.placeholder = `Destino ${i}`;
     input.className = "destino";
     div.appendChild(input);
   }
@@ -16,41 +16,48 @@ function gerarCampos() {
 
 function usarLocalizacao() {
   if (!navigator.geolocation) {
-    alert("Geolocalização não suportada.");
+    alert("Geolocalização não suportada");
     return;
   }
 
   navigator.geolocation.getCurrentPosition(pos => {
     origemAtual = `${pos.coords.latitude},${pos.coords.longitude}`;
-    document.getElementById("origem").value = origemAtual;
-    document.getElementById("infoLocalizacao").innerText = "Localização detectada com sucesso.";
-  }, () => {
-    alert("Erro ao obter localização.");
+    document.getElementById("origem").value = "Minha localização atual";
+    document.getElementById("infoLocalizacao").innerText =
+      `Lat: ${pos.coords.latitude.toFixed(5)} | Lng: ${pos.coords.longitude.toFixed(5)}`;
   });
 }
 
 function calcularRota() {
-  const origem = document.getElementById("origem").value;
-  const destinos = [...document.querySelectorAll(".destino")]
-    .map(i => i.value)
-    .filter(v => v !== "");
+  const origemInput = document.getElementById("origem").value;
+  const destinosInputs = document.querySelectorAll(".destino");
 
-  if (!origem || destinos.length === 0) {
-    alert("Informe origem e destinos.");
+  const destinos = [];
+  destinosInputs.forEach(d => {
+    if (d.value.trim()) destinos.push(d.value.trim());
+  });
+
+  if (!origemInput || destinos.length === 0) {
+    alert("Informe origem e ao menos um destino");
     return;
   }
 
-  origemAtual = origem;
-  rotaAtual = destinos;
+  const origemFinal = origemAtual || origemInput;
 
-  abrirMaps(origemAtual, rotaAtual);
+  rotaAtiva = {
+    origem: origemFinal,
+    destinos: [...destinos]
+  };
+
+  abrirNoMaps(rotaAtiva.origem, rotaAtiva.destinos);
 }
 
-function abrirMaps(origem, destinos) {
+function abrirNoMaps(origem, destinos) {
+  const base = "https://www.google.com/maps/dir/?api=1";
   const waypoints = destinos.slice(0, -1).join("|");
   const destinoFinal = destinos[destinos.length - 1];
 
-  let url = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origem)}&destination=${encodeURIComponent(destinoFinal)}`;
+  let url = `${base}&origin=${encodeURIComponent(origem)}&destination=${encodeURIComponent(destinoFinal)}`;
 
   if (waypoints) {
     url += `&waypoints=${encodeURIComponent(waypoints)}`;
@@ -59,27 +66,51 @@ function abrirMaps(origem, destinos) {
   window.open(url, "_blank");
 }
 
+function adicionarParada() {
+  if (!rotaAtiva) {
+    alert("Nenhuma rota ativa. Gere ou abra uma rota primeiro.");
+    return;
+  }
+
+  const nova = document.getElementById("novaParada").value.trim();
+  if (!nova) {
+    alert("Digite o endereço da nova parada");
+    return;
+  }
+
+  navigator.geolocation.getCurrentPosition(pos => {
+    origemAtual = `${pos.coords.latitude},${pos.coords.longitude}`;
+
+    rotaAtiva.origem = origemAtual;
+    rotaAtiva.destinos.push(nova);
+
+    abrirNoMaps(rotaAtiva.origem, rotaAtiva.destinos);
+    document.getElementById("novaParada").value = "";
+  });
+}
+
 function salvarRota() {
-  if (!rotaAtual || !origemAtual) {
-    alert("Nenhuma rota ativa para salvar.");
+  if (!rotaAtiva) {
+    alert("Nenhuma rota para salvar");
     return;
   }
 
   const nome = prompt("Nome da rota:");
   if (!nome) return;
 
-  const rotas = JSON.parse(localStorage.getItem("rotas")) || {};
-  rotas[nome] = { origem: origemAtual, destinos: rotaAtual };
+  const rotas = JSON.parse(localStorage.getItem("rotas") || "{}");
+  rotas[nome] = rotaAtiva;
 
   localStorage.setItem("rotas", JSON.stringify(rotas));
-  atualizarDropdown();
+  carregarRotas();
 }
 
-function atualizarDropdown() {
+function carregarRotas() {
   const select = document.getElementById("rotasSalvas");
-  select.innerHTML = `<option value="">Selecione uma rota</option>`;
+  select.innerHTML = '<option value="">Selecione uma rota</option>';
 
-  const rotas = JSON.parse(localStorage.getItem("rotas")) || {};
+  const rotas = JSON.parse(localStorage.getItem("rotas") || "{}");
+
   Object.keys(rotas).forEach(nome => {
     const opt = document.createElement("option");
     opt.value = nome;
@@ -88,59 +119,30 @@ function atualizarDropdown() {
   });
 }
 
-function abrirRotaSalva() {
+function abrirRotaSelecionada() {
   const nome = document.getElementById("rotasSalvas").value;
   if (!nome) return;
 
-  const rotas = JSON.parse(localStorage.getItem("rotas"));
-  const rota = rotas[nome];
+  const rotas = JSON.parse(localStorage.getItem("rotas") || "{}");
+  rotaAtiva = rotas[nome];
 
-  origemAtual = rota.origem;
-  rotaAtual = rota.destinos;
-
-  abrirMaps(origemAtual, rotaAtual);
+  abrirNoMaps(rotaAtiva.origem, rotaAtiva.destinos);
 }
 
 function excluirRota() {
   const select = document.getElementById("rotasSalvas");
   const nome = select.value;
-  if (!nome) return;
 
-  if (!confirm("Excluir esta rota?")) return;
+  if (!nome) {
+    alert("Selecione uma rota");
+    return;
+  }
 
-  const rotas = JSON.parse(localStorage.getItem("rotas"));
+  const rotas = JSON.parse(localStorage.getItem("rotas") || "{}");
   delete rotas[nome];
+
   localStorage.setItem("rotas", JSON.stringify(rotas));
-
-  atualizarDropdown();
+  carregarRotas();
 }
 
-function adicionarParada() {
-  if (!rotaAtual) {
-    alert("Nenhuma rota ativa.");
-    return;
-  }
-
-  const nova = document.getElementById("novaParada").value;
-  if (!nova) {
-    alert("Digite o novo destino.");
-    return;
-  }
-
-  if (!navigator.geolocation) {
-    alert("Geolocalização não suportada.");
-    return;
-  }
-
-  navigator.geolocation.getCurrentPosition(pos => {
-    origemAtual = `${pos.coords.latitude},${pos.coords.longitude}`;
-    rotaAtual.push(nova);
-
-    abrirMaps(origemAtual, rotaAtual);
-    document.getElementById("novaParada").value = "";
-  }, () => {
-    alert("Erro ao obter localização atual.");
-  });
-}
-
-atualizarDropdown();
+carregarRotas();
