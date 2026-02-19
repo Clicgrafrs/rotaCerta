@@ -22,8 +22,6 @@
       font-size: 15px;
     }
 
-    button { cursor: pointer; }
-
     .box {
       background: #fff;
       padding: 15px;
@@ -31,17 +29,13 @@
       border-radius: 6px;
     }
 
-    .destino {
-      border-bottom: 1px solid #ddd;
-      padding-bottom: 10px;
-      margin-bottom: 10px;
-    }
+    button { cursor: pointer; }
   </style>
 </head>
 
 <body>
 
-<h2>🚗 Rota Fácil PRO3</h2>
+<h2>🚗 Rota Fácil PRO</h2>
 
 <div class="box">
   <strong>Ponto de partida</strong>
@@ -63,17 +57,17 @@
 </div>
 
 <div class="box">
-  <strong>➕ Adicionar parada à rota ativa</strong>
+  <strong>➕ Adicionar parada durante a rota</strong>
   <input type="text" id="novaParada" placeholder="Digite o novo destino">
   <button onclick="adicionarParada()">Adicionar parada</button>
 </div>
 
 <div class="box">
-  <h3>📂 Rotas salvas</h3>
-  <select id="rotasDropdown" onchange="abrirRotaSelecionada()">
+  <strong>📂 Rotas salvas</strong>
+  <select id="rotasSalvas" onchange="abrirRotaSalva()">
     <option value="">Selecione uma rota</option>
   </select>
-  <button onclick="excluirRota()">🗑 Excluir rota selecionada</button>
+  <button onclick="excluirRota()">🗑 Excluir rota</button>
 </div>
 
 <script src="script.js"></script>
