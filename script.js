@@ -1,148 +1,191 @@
-let rotaAtiva = null;
-let origemAtual = "";
+console.log("Rota Fácil PRO carregado");
 
+let origemAtual = null;
+let rotaAtiva = [];   // rota na ordem real
+let linkAtual = null;
+
+/* =========================
+   LOCALIZAÇÃO GPS
+========================= */
+function usarLocalizacao() {
+  navigator.geolocation.getCurrentPosition(
+    pos => {
+      origemAtual = {
+        lat: pos.coords.latitude,
+        lon: pos.coords.longitude,
+        texto: `${pos.coords.latitude},${pos.coords.longitude}`
+      };
+      document.getElementById("infoLocalizacao").innerText = "📍 Localização ativa";
+    },
+    () => alert("Erro ao obter localização"),
+    { enableHighAccuracy: true }
+  );
+}
+
+/* =========================
+   CLIENTES
+========================= */
+function getClientes() {
+  return JSON.parse(localStorage.getItem("clientes") || "[]");
+}
+
+function salvarClientes() {
+  const clientes = getClientes();
+  document.querySelectorAll(".destino").forEach(d => {
+    const nome = d.querySelector(".nome")?.value.trim();
+    const endereco = d.querySelector(".endereco")?.value.trim();
+    if (!endereco) return;
+    if (!clientes.some(c => c.endereco === endereco))
+      clientes.push({ nome, endereco });
+  });
+  localStorage.setItem("clientes", JSON.stringify(clientes));
+  alert("Clientes salvos");
+}
+
+/* =========================
+   GERAR CAMPOS
+========================= */
 function gerarCampos() {
-  const qtd = document.getElementById("qtd").value;
+  const qtd = +document.getElementById("qtd").value;
   const div = document.getElementById("enderecos");
   div.innerHTML = "";
 
-  for (let i = 1; i <= qtd; i++) {
-    const input = document.createElement("input");
-    input.placeholder = `Destino ${i}`;
-    input.className = "destino";
-    div.appendChild(input);
+  const clientes = getClientes();
+
+  for (let i = 0; i < qtd; i++) {
+    const d = document.createElement("div");
+    d.className = "destino";
+
+    const sel = document.createElement("select");
+    sel.innerHTML = `<option value="">Cliente salvo</option>`;
+    clientes.forEach(c =>
+      sel.innerHTML += `<option value="${c.endereco}">${c.nome || c.endereco}</option>`
+    );
+
+    const end = document.createElement("input");
+    end.className = "endereco";
+    end.placeholder = "Endereço";
+
+    sel.onchange = () => end.value = sel.value;
+
+    const nome = document.createElement("input");
+    nome.className = "nome";
+    nome.placeholder = "Nome do cliente";
+
+    d.append(sel, end, nome);
+    div.appendChild(d);
   }
 }
 
-function usarLocalizacao() {
-  if (!navigator.geolocation) {
-    alert("Geolocalização não suportada");
+/* =========================
+   GEO
+========================= */
+async function geocodificar(txt) {
+  const r = await fetch(
+    `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(txt)}`
+  );
+  const d = await r.json();
+  if (!d.length) throw new Error("Endereço não encontrado");
+  return { texto: txt, lat: +d[0].lat, lon: +d[0].lon };
+}
+
+/* =========================
+   CALCULAR ROTA
+========================= */
+async function calcularRota() {
+  if (!origemAtual)
+    origemAtual = await geocodificar(document.getElementById("origem").value);
+
+  rotaAtiva = [];
+
+  for (let i of document.querySelectorAll(".endereco"))
+    if (i.value) rotaAtiva.push(await geocodificar(i.value));
+
+  gerarLinkRota();
+}
+
+/* =========================
+   GERAR LINK
+========================= */
+function gerarLinkRota() {
+  if (!rotaAtiva.length) return;
+
+  const o = encodeURIComponent(origemAtual.texto);
+  const d = encodeURIComponent(rotaAtiva.at(-1).texto);
+  const w = rotaAtiva.slice(0,-1).map(r => encodeURIComponent(r.texto)).join("|");
+
+  linkAtual =
+    `https://www.google.com/maps/dir/?api=1&origin=${o}&destination=${d}&travelmode=driving` +
+    (w ? `&waypoints=${w}` : "");
+
+  document.getElementById("resultado").innerHTML =
+    `<li><a href="${linkAtual}" target="_blank">🚗 Abrir rota no Google Maps</a></li>`;
+}
+
+/* =========================
+   ADICIONAR PARADA (CORRETO)
+========================= */
+async function adicionarParada() {
+  if (!rotaAtiva.length) {
+    alert("Nenhuma rota ativa");
     return;
   }
 
-  navigator.geolocation.getCurrentPosition(pos => {
-    origemAtual = `${pos.coords.latitude},${pos.coords.longitude}`;
-    document.getElementById("origem").value = "Minha localização atual";
-    document.getElementById("infoLocalizacao").innerText =
-      `Lat: ${pos.coords.latitude.toFixed(5)} | Lng: ${pos.coords.longitude.toFixed(5)}`;
-  });
+  const txt = document.getElementById("novaParada").value.trim();
+  if (!txt) return alert("Digite o endereço");
+
+  const nova = await geocodificar(txt);
+  rotaAtiva.push(nova);
+
+  document.getElementById("novaParada").value = "";
+  gerarLinkRota();
 }
 
-function calcularRota() {
-  const origemInput = document.getElementById("origem").value;
-  const destinosInputs = document.querySelectorAll(".destino");
-
-  const destinos = [];
-  destinosInputs.forEach(d => {
-    if (d.value.trim()) destinos.push(d.value.trim());
-  });
-
-  if (!origemInput || destinos.length === 0) {
-    alert("Informe origem e ao menos um destino");
-    return;
-  }
-
-  const origemFinal = origemAtual || origemInput;
-
-  rotaAtiva = {
-    origem: origemFinal,
-    destinos: [...destinos]
-  };
-
-  abrirNoMaps(rotaAtiva.origem, rotaAtiva.destinos);
-}
-
-function abrirNoMaps(origem, destinos) {
-  const base = "https://www.google.com/maps/dir/?api=1";
-  const waypoints = destinos.slice(0, -1).join("|");
-  const destinoFinal = destinos[destinos.length - 1];
-
-  let url = `${base}&origin=${encodeURIComponent(origem)}&destination=${encodeURIComponent(destinoFinal)}`;
-
-  if (waypoints) {
-    url += `&waypoints=${encodeURIComponent(waypoints)}`;
-  }
-
-  window.open(url, "_blank");
-}
-
-function adicionarParada() {
-  if (!rotaAtiva) {
-    alert("Nenhuma rota ativa. Gere ou abra uma rota primeiro.");
-    return;
-  }
-
-  const nova = document.getElementById("novaParada").value.trim();
-  if (!nova) {
-    alert("Digite o endereço da nova parada");
-    return;
-  }
-
-  navigator.geolocation.getCurrentPosition(pos => {
-    origemAtual = `${pos.coords.latitude},${pos.coords.longitude}`;
-
-    rotaAtiva.origem = origemAtual;
-    rotaAtiva.destinos.push(nova);
-
-    abrirNoMaps(rotaAtiva.origem, rotaAtiva.destinos);
-    document.getElementById("novaParada").value = "";
-  });
-}
-
+/* =========================
+   ROTAS SALVAS
+========================= */
 function salvarRota() {
-  if (!rotaAtiva) {
-    alert("Nenhuma rota para salvar");
-    return;
-  }
+  if (!linkAtual) return alert("Calcule a rota antes");
 
   const nome = prompt("Nome da rota:");
   if (!nome) return;
 
-  const rotas = JSON.parse(localStorage.getItem("rotas") || "{}");
-  rotas[nome] = rotaAtiva;
-
+  const rotas = JSON.parse(localStorage.getItem("rotas") || "[]");
+  rotas.push({ nome, origem: origemAtual, rota: rotaAtiva, link: linkAtual });
   localStorage.setItem("rotas", JSON.stringify(rotas));
-  carregarRotas();
+  listarRotas();
 }
 
-function carregarRotas() {
-  const select = document.getElementById("rotasSalvas");
-  select.innerHTML = '<option value="">Selecione uma rota</option>';
-
-  const rotas = JSON.parse(localStorage.getItem("rotas") || "{}");
-
-  Object.keys(rotas).forEach(nome => {
-    const opt = document.createElement("option");
-    opt.value = nome;
-    opt.textContent = nome;
-    select.appendChild(opt);
-  });
+function listarRotas() {
+  const sel = document.getElementById("rotasSelect");
+  sel.innerHTML = `<option value="">Selecione uma rota salva</option>`;
+  const rotas = JSON.parse(localStorage.getItem("rotas") || "[]");
+  rotas.forEach((r,i) =>
+    sel.innerHTML += `<option value="${i}">${r.nome}</option>`
+  );
 }
 
 function abrirRotaSelecionada() {
-  const nome = document.getElementById("rotasSalvas").value;
-  if (!nome) return;
+  const i = document.getElementById("rotasSelect").value;
+  if (i === "") return alert("Selecione uma rota");
 
-  const rotas = JSON.parse(localStorage.getItem("rotas") || "{}");
-  rotaAtiva = rotas[nome];
+  const r = JSON.parse(localStorage.getItem("rotas"))[i];
+  origemAtual = r.origem;
+  rotaAtiva = r.rota;
+  linkAtual = r.link;
 
-  abrirNoMaps(rotaAtiva.origem, rotaAtiva.destinos);
+  gerarLinkRota();
+  window.open(linkAtual, "_blank");
 }
 
-function excluirRota() {
-  const select = document.getElementById("rotasSalvas");
-  const nome = select.value;
+function excluirRotaSelecionada() {
+  const i = document.getElementById("rotasSelect").value;
+  if (i === "") return alert("Selecione uma rota");
 
-  if (!nome) {
-    alert("Selecione uma rota");
-    return;
-  }
-
-  const rotas = JSON.parse(localStorage.getItem("rotas") || "{}");
-  delete rotas[nome];
-
+  const rotas = JSON.parse(localStorage.getItem("rotas"));
+  rotas.splice(i,1);
   localStorage.setItem("rotas", JSON.stringify(rotas));
-  carregarRotas();
+  listarRotas();
 }
 
-carregarRotas();
+listarRotas();
