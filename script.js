@@ -1,7 +1,8 @@
 console.log("Rota Fácil PRO carregado");
 
 let origemAtual = null;
-let rotaAtiva = [];
+let destinosGlobais = [];
+let rotaOrdenada = [];
 let linkAtual = null;
 
 /* =========================
@@ -63,12 +64,14 @@ function gerarCampos() {
     const sel = document.createElement("select");
     sel.innerHTML = `<option value="">Cliente salvo</option>`;
     clientes.forEach(c =>
-      sel.innerHTML += `<option value="${c.endereco}|${c.nome || ""}">${c.nome || c.endereco}</option>`
+      sel.innerHTML += `<option value="${c.endereco}|${c.nome || ""}">
+        ${c.nome || c.endereco}
+      </option>`
     );
 
     const end = document.createElement("input");
     end.className = "endereco";
-    end.placeholder = "Endereço";
+    end.placeholder = "Endereço *";
 
     const nome = document.createElement("input");
     nome.className = "nome";
@@ -76,9 +79,9 @@ function gerarCampos() {
 
     sel.onchange = () => {
       if (!sel.value) return;
-      const [endereco, nomeCliente] = sel.value.split("|");
-      end.value = endereco;
-      nome.value = nomeCliente;
+      const [e, n] = sel.value.split("|");
+      end.value = e;
+      nome.value = n;
     };
 
     d.append(sel, end, nome);
@@ -87,76 +90,123 @@ function gerarCampos() {
 }
 
 /* =========================
-   GEO
+   GEO + DISTÂNCIA
 ========================= */
 async function geocodificar(txt) {
   const r = await fetch(
     `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(txt)}`
   );
   const d = await r.json();
-  if (!d.length) throw new Error("Endereço não encontrado");
+  if (!d.length) throw new Error("Endereço não encontrado: " + txt);
   return { texto: txt, lat: +d[0].lat, lon: +d[0].lon };
+}
+
+function distancia(a, b) {
+  const R = 6371;
+  const dLat = (b.lat - a.lat) * Math.PI / 180;
+  const dLon = (b.lon - a.lon) * Math.PI / 180;
+  const x =
+    Math.sin(dLat/2)**2 +
+    Math.cos(a.lat*Math.PI/180) *
+    Math.cos(b.lat*Math.PI/180) *
+    Math.sin(dLon/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1-x));
+}
+
+function ordenarPorProximidade(origem, destinos) {
+  let atual = origem;
+  let restantes = [...destinos];
+  let rota = [];
+
+  while (restantes.length) {
+    let idx = 0;
+    for (let i = 1; i < restantes.length; i++) {
+      if (distancia(atual, restantes[i]) < distancia(atual, restantes[idx])) {
+        idx = i;
+      }
+    }
+    atual = restantes[idx];
+    rota.push(restantes.splice(idx, 1)[0]);
+  }
+
+  return rota;
 }
 
 /* =========================
    CALCULAR ROTA
 ========================= */
 async function calcularRota() {
-  if (!origemAtual)
-    origemAtual = await geocodificar(document.getElementById("origem").value);
+  const origemTxt = document.getElementById("origem").value.trim();
 
-  rotaAtiva = [];
+  if (!origemAtual && !origemTxt)
+    return alert("Informe o ponto de partida");
+
+  if (!origemAtual)
+    origemAtual = await geocodificar(origemTxt);
+
+  destinosGlobais = [];
 
   for (let i of document.querySelectorAll(".endereco")) {
-    if (i.value) rotaAtiva.push(await geocodificar(i.value));
+    if (!i.value.trim())
+      return alert("Preencha todos os endereços de destino");
+    destinosGlobais.push(await geocodificar(i.value));
   }
 
-  gerarRoteiro();
+  rotaOrdenada = ordenarPorProximidade(origemAtual, destinosGlobais);
+  gerarLink();
 }
 
 /* =========================
-   GERAR ROTEIRO
+   GERAR LINK
 ========================= */
-function gerarRoteiro() {
-  if (!rotaAtiva.length) return;
+function gerarLink() {
+  if (!rotaOrdenada.length) return;
 
   const o = encodeURIComponent(origemAtual.texto);
-  const d = encodeURIComponent(rotaAtiva.at(-1).texto);
-  const w = rotaAtiva.slice(0,-1).map(r => encodeURIComponent(r.texto)).join("|");
+  const d = encodeURIComponent(rotaOrdenada.at(-1).texto);
+  const w = rotaOrdenada.slice(0,-1)
+    .map(r => encodeURIComponent(r.texto))
+    .join("|");
 
   linkAtual =
     `https://www.google.com/maps/dir/?api=1&origin=${o}&destination=${d}&travelmode=driving` +
     (w ? `&waypoints=${w}` : "");
 
   document.getElementById("resultado").innerHTML =
-    `<li><a href="${linkAtual}" target="_blank">🚗 Abrir rota no Google Maps</a></li>`;
+    `<li><a href="${linkAtual}" target="_blank">🚗 Abrir rota otimizada no Google Maps</a></li>`;
 }
 
 /* =========================
    ADICIONAR PARADA
 ========================= */
 async function adicionarParada() {
-  if (!rotaAtiva.length) return alert("Nenhuma rota ativa");
+  if (!rotaOrdenada.length)
+    return alert("Calcule ou abra uma rota antes");
 
   const txt = document.getElementById("novaParada").value.trim();
-  if (!txt) return alert("Digite o endereço");
+  if (!txt) return alert("Digite o endereço da nova parada");
 
-  rotaAtiva.push(await geocodificar(txt));
+  rotaOrdenada.push(await geocodificar(txt));
   document.getElementById("novaParada").value = "";
-  gerarRoteiro();
+  gerarLink();
 }
 
 /* =========================
    ROTAS SALVAS
 ========================= */
 function salvarRota() {
-  if (!linkAtual) return alert("Gere a rota antes");
+  if (!linkAtual) return alert("Calcule a rota antes de salvar");
 
   const nome = prompt("Nome da rota:");
   if (!nome) return;
 
   const rotas = JSON.parse(localStorage.getItem("rotas") || "[]");
-  rotas.push({ nome, origem: origemAtual, rota: rotaAtiva, link: linkAtual });
+  rotas.push({
+    nome,
+    origem: origemAtual,
+    rota: rotaOrdenada,
+    link: linkAtual
+  });
 
   localStorage.setItem("rotas", JSON.stringify(rotas));
   listarRotas();
@@ -171,14 +221,12 @@ function listarRotas() {
 
 function abrirRotaSelecionada() {
   const i = document.getElementById("rotasSelect").value;
-  if (i === "") return;
+  if (i === "") return alert("Selecione uma rota");
 
   const r = JSON.parse(localStorage.getItem("rotas"))[i];
   origemAtual = r.origem;
-  rotaAtiva = r.rota;
-  linkAtual = r.link;
-
-  gerarRoteiro();
+  rotaOrdenada = r.rota;
+  gerarLink();
   window.open(linkAtual, "_blank");
 }
 
