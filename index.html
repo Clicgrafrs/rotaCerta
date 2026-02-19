@@ -22,25 +22,25 @@
       font-size: 15px;
     }
 
+    button { cursor: pointer; }
+
     .box {
       background: #fff;
       padding: 15px;
       margin-bottom: 15px;
       border-radius: 6px;
     }
-
-    button { cursor: pointer; }
   </style>
 </head>
 
 <body>
 
-<h2>🚗 Rota Fácil PRO5</h2>
+<h2>🚗 Rota Fácil PRO</h2>
 
 <div class="box">
   <strong>Ponto de partida</strong>
   <input type="text" id="origem" placeholder="Digite o ponto de partida">
-  <button onclick="usarLocalizacao()">📍 Usar minha localização</button>
+  <button onclick="usarLocalizacao()">📍 Usar minha localização (GPS)</button>
   <small id="infoLocalizacao"></small>
 </div>
 
@@ -52,22 +52,22 @@
 </div>
 
 <div class="box">
-  <button onclick="calcularRota()">Calcular rota</button>
-  <button onclick="salvarRota()">⭐ Salvar rota</button>
+  <button onclick="calcularRota()">🧭 Calcular rota</button>
+  <button onclick="salvarRota()">⭐ Salvar esta rota</button>
 </div>
 
 <div class="box">
-  <strong>➕ Adicionar parada durante a rota</strong>
-  <input type="text" id="novaParada" placeholder="Digite o novo destino">
-  <button onclick="adicionarParada()">Adicionar parada</button>
+  <strong>Adicionar nova parada à rota ativa</strong>
+  <input type="text" id="novaParada" placeholder="Digite o novo endereço">
+  <button onclick="adicionarParada()">➕ Adicionar parada</button>
 </div>
 
 <div class="box">
-  <strong>📂 Rotas salvas</strong>
-  <select id="rotasSalvas" onchange="abrirRotaSalva()">
+  <h3>📂 Rotas salvas</h3>
+  <select id="rotasSalvas" onchange="abrirRotaSelecionada()">
     <option value="">Selecione uma rota</option>
   </select>
-  <button onclick="excluirRota()">🗑 Excluir rota</button>
+  <button onclick="excluirRota()">🗑️ Excluir rota selecionada</button>
 </div>
 
 <script src="script.js"></script>
