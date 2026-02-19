@@ -41,13 +41,12 @@
 
 <body>
 
-<h2>🚗 Rota Fácil PRO 12</h2>
+<h2>🚗 Rota Fácil PRO 12.0</h2>
 
 <div class="box">
   <strong>Ponto de partida</strong>
   <input type="text" id="origem" placeholder="Digite o ponto de partida">
   <button onclick="usarLocalizacao()">📍 Usar minha localização</button>
-  <small id="infoLocalizacao"></small>
 </div>
 
 <div class="box">
@@ -55,11 +54,10 @@
   <input type="number" id="qtd" min="1" max="10" value="2">
   <button onclick="gerarCampos()">Gerar destinos</button>
   <div id="enderecos"></div>
-  <button onclick="salvarClientes()">💾 Salvar endereços/clientes</button>
 </div>
 
 <div class="box">
-  <button onclick="calcularRota()">Calcular rota otimizada</button>
+  <button onclick="calcularRota()">Calcular rota</button>
 
   <strong>Adicionar nova parada durante a rota</strong>
   <input type="text" id="novaParada" placeholder="Digite o endereço da nova parada">
