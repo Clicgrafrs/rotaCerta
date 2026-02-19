@@ -30,17 +30,23 @@
       margin-bottom: 15px;
       border-radius: 6px;
     }
+
+    .destino {
+      border-bottom: 1px solid #ddd;
+      padding-bottom: 10px;
+      margin-bottom: 10px;
+    }
   </style>
 </head>
 
 <body>
 
-<h2>🚗 Rota Fácil PRO6</h2>
+<h2>🚗 Rota Fácil PRO7</h2>
 
 <div class="box">
   <strong>Ponto de partida</strong>
   <input type="text" id="origem" placeholder="Digite o ponto de partida">
-  <button onclick="usarLocalizacao()">📍 Usar minha localização (GPS)</button>
+  <button onclick="usarLocalizacao()">📍 Usar minha localização</button>
   <small id="infoLocalizacao"></small>
 </div>
 
@@ -49,25 +55,31 @@
   <input type="number" id="qtd" min="1" max="10" value="2">
   <button onclick="gerarCampos()">Gerar destinos</button>
   <div id="enderecos"></div>
+  <button onclick="salvarClientes()">💾 Salvar endereços/clientes</button>
 </div>
 
 <div class="box">
-  <button onclick="calcularRota()">🧭 Calcular rota</button>
+  <button onclick="calcularRota()">Calcular rota</button>
+
+  <strong>Adicionar nova parada durante a rota</strong>
+  <input type="text" id="novaParada" placeholder="Digite o endereço da nova parada">
+  <button onclick="adicionarParada()">➕ Adicionar parada agora</button>
+
   <button onclick="salvarRota()">⭐ Salvar esta rota</button>
 </div>
 
 <div class="box">
-  <strong>Adicionar nova parada à rota ativa</strong>
-  <input type="text" id="novaParada" placeholder="Digite o novo endereço">
-  <button onclick="adicionarParada()">➕ Adicionar parada</button>
+  <h3>Roteiro</h3>
+  <ol id="resultado"></ol>
 </div>
 
 <div class="box">
   <h3>📂 Rotas salvas</h3>
-  <select id="rotasSalvas" onchange="abrirRotaSelecionada()">
-    <option value="">Selecione uma rota</option>
+  <select id="rotasSelect">
+    <option value="">Selecione uma rota salva</option>
   </select>
-  <button onclick="excluirRota()">🗑️ Excluir rota selecionada</button>
+  <button onclick="abrirRotaSelecionada()">🚗 Abrir rota</button>
+  <button onclick="excluirRotaSelecionada()">🗑️ Excluir rota</button>
 </div>
 
 <script src="script.js"></script>
