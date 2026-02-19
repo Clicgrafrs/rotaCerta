@@ -1,11 +1,11 @@
 console.log("Rota Fácil PRO carregado");
 
 let origemAtual = null;
-let rotaAtiva = [];   // rota na ordem real
+let rotaAtiva = [];
 let linkAtual = null;
 
 /* =========================
-   LOCALIZAÇÃO GPS
+   LOCALIZAÇÃO
 ========================= */
 function usarLocalizacao() {
   navigator.geolocation.getCurrentPosition(
@@ -31,15 +31,19 @@ function getClientes() {
 
 function salvarClientes() {
   const clientes = getClientes();
+
   document.querySelectorAll(".destino").forEach(d => {
-    const nome = d.querySelector(".nome")?.value.trim();
-    const endereco = d.querySelector(".endereco")?.value.trim();
+    const nome = d.querySelector(".nome").value.trim();
+    const endereco = d.querySelector(".endereco").value.trim();
     if (!endereco) return;
-    if (!clientes.some(c => c.endereco === endereco))
+
+    if (!clientes.some(c => c.endereco === endereco)) {
       clientes.push({ nome, endereco });
+    }
   });
+
   localStorage.setItem("clientes", JSON.stringify(clientes));
-  alert("Clientes salvos");
+  alert("Endereços salvos");
 }
 
 /* =========================
@@ -59,18 +63,23 @@ function gerarCampos() {
     const sel = document.createElement("select");
     sel.innerHTML = `<option value="">Cliente salvo</option>`;
     clientes.forEach(c =>
-      sel.innerHTML += `<option value="${c.endereco}">${c.nome || c.endereco}</option>`
+      sel.innerHTML += `<option value="${c.endereco}|${c.nome || ""}">${c.nome || c.endereco}</option>`
     );
 
     const end = document.createElement("input");
     end.className = "endereco";
     end.placeholder = "Endereço";
 
-    sel.onchange = () => end.value = sel.value;
-
     const nome = document.createElement("input");
     nome.className = "nome";
-    nome.placeholder = "Nome do cliente";
+    nome.placeholder = "Nome do cliente (opcional)";
+
+    sel.onchange = () => {
+      if (!sel.value) return;
+      const [endereco, nomeCliente] = sel.value.split("|");
+      end.value = endereco;
+      nome.value = nomeCliente;
+    };
 
     d.append(sel, end, nome);
     div.appendChild(d);
@@ -98,16 +107,17 @@ async function calcularRota() {
 
   rotaAtiva = [];
 
-  for (let i of document.querySelectorAll(".endereco"))
+  for (let i of document.querySelectorAll(".endereco")) {
     if (i.value) rotaAtiva.push(await geocodificar(i.value));
+  }
 
-  gerarLinkRota();
+  gerarRoteiro();
 }
 
 /* =========================
-   GERAR LINK
+   GERAR ROTEIRO
 ========================= */
-function gerarLinkRota() {
+function gerarRoteiro() {
   if (!rotaAtiva.length) return;
 
   const o = encodeURIComponent(origemAtual.texto);
@@ -123,35 +133,31 @@ function gerarLinkRota() {
 }
 
 /* =========================
-   ADICIONAR PARADA (CORRETO)
+   ADICIONAR PARADA
 ========================= */
 async function adicionarParada() {
-  if (!rotaAtiva.length) {
-    alert("Nenhuma rota ativa");
-    return;
-  }
+  if (!rotaAtiva.length) return alert("Nenhuma rota ativa");
 
   const txt = document.getElementById("novaParada").value.trim();
   if (!txt) return alert("Digite o endereço");
 
-  const nova = await geocodificar(txt);
-  rotaAtiva.push(nova);
-
+  rotaAtiva.push(await geocodificar(txt));
   document.getElementById("novaParada").value = "";
-  gerarLinkRota();
+  gerarRoteiro();
 }
 
 /* =========================
    ROTAS SALVAS
 ========================= */
 function salvarRota() {
-  if (!linkAtual) return alert("Calcule a rota antes");
+  if (!linkAtual) return alert("Gere a rota antes");
 
   const nome = prompt("Nome da rota:");
   if (!nome) return;
 
   const rotas = JSON.parse(localStorage.getItem("rotas") || "[]");
   rotas.push({ nome, origem: origemAtual, rota: rotaAtiva, link: linkAtual });
+
   localStorage.setItem("rotas", JSON.stringify(rotas));
   listarRotas();
 }
@@ -159,28 +165,26 @@ function salvarRota() {
 function listarRotas() {
   const sel = document.getElementById("rotasSelect");
   sel.innerHTML = `<option value="">Selecione uma rota salva</option>`;
-  const rotas = JSON.parse(localStorage.getItem("rotas") || "[]");
-  rotas.forEach((r,i) =>
-    sel.innerHTML += `<option value="${i}">${r.nome}</option>`
-  );
+  JSON.parse(localStorage.getItem("rotas") || "[]")
+    .forEach((r,i) => sel.innerHTML += `<option value="${i}">${r.nome}</option>`);
 }
 
 function abrirRotaSelecionada() {
   const i = document.getElementById("rotasSelect").value;
-  if (i === "") return alert("Selecione uma rota");
+  if (i === "") return;
 
   const r = JSON.parse(localStorage.getItem("rotas"))[i];
   origemAtual = r.origem;
   rotaAtiva = r.rota;
   linkAtual = r.link;
 
-  gerarLinkRota();
+  gerarRoteiro();
   window.open(linkAtual, "_blank");
 }
 
 function excluirRotaSelecionada() {
   const i = document.getElementById("rotasSelect").value;
-  if (i === "") return alert("Selecione uma rota");
+  if (i === "") return;
 
   const rotas = JSON.parse(localStorage.getItem("rotas"));
   rotas.splice(i,1);
