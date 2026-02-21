@@ -100,12 +100,21 @@ function gerarCampos() {
    GEO + DISTÂNCIA
 ========================= */
 async function geocodificar(txt) {
-  const r = await fetch(
-    `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(txt)}`
-  );
-  const d = await r.json();
-  if (!d.length) throw new Error("Endereço não encontrado: " + txt);
-  return { texto: txt, lat: +d[0].lat, lon: +d[0].lon };
+  try {
+    const r = await fetch(
+      `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(txt)}`
+    );
+    const d = await r.json();
+
+    if (!d.length) {
+      throw new Error(`Endereço inválido ou não encontrado:\n${txt}`);
+    }
+
+    return { texto: txt, lat: +d[0].lat, lon: +d[0].lon };
+
+  } catch (e) {
+    throw new Error(e.message || "Erro ao localizar endereço");
+  }
 }
 
 function distancia(a, b) {
@@ -143,24 +152,30 @@ function ordenarPorProximidade(origem, destinos) {
    CALCULAR ROTA
 ========================= */
 async function calcularRota() {
-  const origemTxt = document.getElementById("origem").value.trim();
+  try {
+    const origemTxt = document.getElementById("origem").value.trim();
 
-  if (!origemAtual && !origemTxt)
-    return alert("Informe o ponto de partida");
+    if (!origemAtual && !origemTxt)
+      return alert("Informe o ponto de partida");
 
-  if (!origemAtual)
-    origemAtual = await geocodificar(origemTxt);
+    if (!origemAtual)
+      origemAtual = await geocodificar(origemTxt);
 
-  destinosGlobais = [];
+    destinosGlobais = [];
 
-  for (let i of document.querySelectorAll(".endereco")) {
-    if (!i.value.trim())
-      return alert("Preencha todos os endereços de destino");
-    destinosGlobais.push(await geocodificar(i.value));
+    for (let i of document.querySelectorAll(".endereco")) {
+      if (!i.value.trim())
+        return alert("Preencha todos os endereços de destino");
+
+      destinosGlobais.push(await geocodificar(i.value));
+    }
+
+    rotaOrdenada = ordenarPorProximidade(origemAtual, destinosGlobais);
+    gerarLink();
+
+  } catch (e) {
+    alert(e.message);
   }
-
-  rotaOrdenada = ordenarPorProximidade(origemAtual, destinosGlobais);
-  gerarLink();
 }
 
 /* =========================
@@ -170,7 +185,6 @@ function gerarLink() {
   if (!rotaOrdenada.length) return;
 
   if (isIOS()) {
-    // Apple Maps
     const pontos = [
       origemAtual.texto,
       ...rotaOrdenada.map(r => r.texto)
@@ -182,7 +196,6 @@ function gerarLink() {
       `<li><a href="${linkAtual}" target="_blank">🍎 Abrir rota no Apple Maps</a></li>`;
 
   } else {
-    // Google Maps
     const o = encodeURIComponent(origemAtual.texto);
     const d = encodeURIComponent(rotaOrdenada.at(-1).texto);
     const w = rotaOrdenada.slice(0,-1)
@@ -202,15 +215,20 @@ function gerarLink() {
    ADICIONAR PARADA
 ========================= */
 async function adicionarParada() {
-  if (!rotaOrdenada.length)
-    return alert("Calcule ou abra uma rota antes");
+  try {
+    if (!rotaOrdenada.length)
+      return alert("Calcule ou abra uma rota antes");
 
-  const txt = document.getElementById("novaParada").value.trim();
-  if (!txt) return alert("Digite o endereço da nova parada");
+    const txt = document.getElementById("novaParada").value.trim();
+    if (!txt) return alert("Digite o endereço da nova parada");
 
-  rotaOrdenada.push(await geocodificar(txt));
-  document.getElementById("novaParada").value = "";
-  gerarLink();
+    rotaOrdenada.push(await geocodificar(txt));
+    document.getElementById("novaParada").value = "";
+    gerarLink();
+
+  } catch (e) {
+    alert(e.message);
+  }
 }
 
 /* =========================
