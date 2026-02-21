@@ -6,6 +6,13 @@ let rotaOrdenada = [];
 let linkAtual = null;
 
 /* =========================
+   DETECTAR iOS
+========================= */
+function isIOS() {
+  return /iPad|iPhone|iPod/.test(navigator.userAgent);
+}
+
+/* =========================
    LOCALIZAÇÃO
 ========================= */
 function usarLocalizacao() {
@@ -157,23 +164,38 @@ async function calcularRota() {
 }
 
 /* =========================
-   GERAR LINK
+   GERAR LINK (ANDROID + iOS)
 ========================= */
 function gerarLink() {
   if (!rotaOrdenada.length) return;
 
-  const o = encodeURIComponent(origemAtual.texto);
-  const d = encodeURIComponent(rotaOrdenada.at(-1).texto);
-  const w = rotaOrdenada.slice(0,-1)
-    .map(r => encodeURIComponent(r.texto))
-    .join("|");
+  if (isIOS()) {
+    // Apple Maps
+    const pontos = [
+      origemAtual.texto,
+      ...rotaOrdenada.map(r => r.texto)
+    ].join("+to:");
 
-  linkAtual =
-    `https://www.google.com/maps/dir/?api=1&origin=${o}&destination=${d}&travelmode=driving` +
-    (w ? `&waypoints=${w}` : "");
+    linkAtual = `https://maps.apple.com/?daddr=${encodeURIComponent(pontos)}`;
 
-  document.getElementById("resultado").innerHTML =
-    `<li><a href="${linkAtual}" target="_blank">🚗 Abrir rota otimizada no Google Maps</a></li>`;
+    document.getElementById("resultado").innerHTML =
+      `<li><a href="${linkAtual}" target="_blank">🍎 Abrir rota no Apple Maps</a></li>`;
+
+  } else {
+    // Google Maps
+    const o = encodeURIComponent(origemAtual.texto);
+    const d = encodeURIComponent(rotaOrdenada.at(-1).texto);
+    const w = rotaOrdenada.slice(0,-1)
+      .map(r => encodeURIComponent(r.texto))
+      .join("|");
+
+    linkAtual =
+      `https://www.google.com/maps/dir/?api=1&origin=${o}&destination=${d}&travelmode=driving` +
+      (w ? `&waypoints=${w}` : "");
+
+    document.getElementById("resultado").innerHTML =
+      `<li><a href="${linkAtual}" target="_blank">🚗 Abrir rota otimizada no Google Maps</a></li>`;
+  }
 }
 
 /* =========================
