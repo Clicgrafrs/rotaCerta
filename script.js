@@ -35,7 +35,8 @@ function usarLocalizacao() {
         lon: pos.coords.longitude,
         texto: `${pos.coords.latitude},${pos.coords.longitude}`
       };
-      document.getElementById("infoLocalizacao").innerText = "📍 Localização ativa";
+      document.getElementById("infoLocalizacao").innerText =
+        "📍 Localização ativa";
     },
     () => alert("Erro ao obter localização"),
     { enableHighAccuracy: true }
@@ -43,7 +44,7 @@ function usarLocalizacao() {
 }
 
 /* =========================
-   CLIENTES
+   CLIENTES (STORAGE)
 ========================= */
 function getClientes() {
   return JSON.parse(localStorage.getItem("clientes") || "[]");
@@ -56,15 +57,6 @@ function salvarClientesStorage(clientes) {
 /* =========================
    NORMALIZAÇÃO
 ========================= */
-function normalizarTexto(txt) {
-  return txt
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
 function normalizarCoordenada(v, casas = 5) {
   return Number(v).toFixed(casas);
 }
@@ -77,7 +69,7 @@ function mesmoLocal(a, b) {
 }
 
 /* =========================
-   GEO + AUTOCOMPLETE
+   GEOLOCALIZAÇÃO
 ========================= */
 async function geocodificar(txt) {
   const texto = txt.trim();
@@ -104,14 +96,6 @@ async function geocodificar(txt) {
     lat: +res.lat,
     lon: +res.lon
   };
-}
-
-async function buscarSugestoesEndereco(txt) {
-  if (txt.length < 3) return [];
-  const r = await fetch(
-    `https://nominatim.openstreetmap.org/search?format=json&limit=5&countrycodes=br&q=${encodeURIComponent(txt)}`
-  );
-  return await r.json();
 }
 
 /* =========================
@@ -146,7 +130,27 @@ async function salvarClientes() {
   }
 
   salvarClientesStorage(clientes);
+  listarClientesSelect();
   alert(`✅ ${salvos} cliente(s) salvos com sucesso`);
+}
+
+/* =========================
+   LISTAR CLIENTES (SELECT)
+========================= */
+function listarClientesSelect() {
+  const sel = document.getElementById("clientesSelect");
+  if (!sel) return;
+
+  const clientes = getClientes();
+  sel.innerHTML = `<option value="">Selecione um cliente</option>`;
+
+  clientes.forEach((c, i) => {
+    sel.innerHTML += `
+      <option value="${i}">
+        ${c.nome || c.endereco}
+      </option>
+    `;
+  });
 }
 
 /* =========================
@@ -163,8 +167,21 @@ function excluirCliente(index) {
   gerarCampos();
 }
 
+function excluirClienteSelecionado() {
+  const sel = document.getElementById("clientesSelect");
+  const index = sel.value;
+
+  if (index === "") {
+    alert("Selecione um cliente para excluir");
+    return;
+  }
+
+  excluirCliente(Number(index));
+  listarClientesSelect();
+}
+
 /* =========================
-   GERAR CAMPOS
+   GERAR CAMPOS DE DESTINO
 ========================= */
 function gerarCampos() {
   const qtd = +document.getElementById("qtd").value;
@@ -180,9 +197,10 @@ function gerarCampos() {
     const sel = document.createElement("select");
     sel.innerHTML = `<option value="">Cliente salvo</option>`;
     clientes.forEach((c, idx) => {
-      sel.innerHTML += `<option value="${idx}">
-        ${c.nome || c.endereco}
-      </option>`;
+      sel.innerHTML += `
+        <option value="${idx}">
+          ${c.nome || c.endereco}
+        </option>`;
     });
 
     const end = document.createElement("input");
@@ -217,6 +235,7 @@ function calcularDistancia(lat1, lon1, lat2, lon2) {
     Math.cos(lat1 * Math.PI / 180) *
     Math.cos(lat2 * Math.PI / 180) *
     Math.sin(dLon / 2) ** 2;
+
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
@@ -243,7 +262,6 @@ async function calcularRota() {
 
     gerarLink();
 
-    // 👉 FOCO AUTOMÁTICO NO RESULTADO
     document.getElementById("resultado").scrollIntoView({
       behavior: "smooth",
       block: "center"
@@ -261,12 +279,19 @@ function gerarLink() {
   if (!rotaOrdenada.length) return;
 
   if (isIOS()) {
-    const pontos = [origemAtual.texto, ...rotaOrdenada.map(r => r.texto)].join("+to:");
+    const pontos = [
+      origemAtual.texto,
+      ...rotaOrdenada.map(r => r.texto)
+    ].join("+to:");
+
     linkAtual = `https://maps.apple.com/?daddr=${encodeURIComponent(pontos)}`;
   } else {
     const o = encodeURIComponent(origemAtual.texto);
     const d = encodeURIComponent(rotaOrdenada.at(-1).texto);
-    const w = rotaOrdenada.slice(0, -1).map(r => encodeURIComponent(r.texto)).join("|");
+    const w = rotaOrdenada
+      .slice(0, -1)
+      .map(r => encodeURIComponent(r.texto))
+      .join("|");
 
     linkAtual =
       `https://www.google.com/maps/dir/?api=1&origin=${o}&destination=${d}` +
@@ -280,10 +305,78 @@ function gerarLink() {
 }
 
 /* =========================
-   ABRIR ÚLTIMA ROTA
+   ROTAS SALVAS
 ========================= */
-function abrirUltimaRota() {
-  const link = localStorage.getItem("ultimaRota");
-  if (!link) return alert("Nenhuma rota salva");
-  window.open(link, "_blank");
+function salvarRota() {
+  if (!linkAtual || !rotaOrdenada.length) {
+    alert("Calcule uma rota antes de salvar");
+    return;
+  }
+
+  const nome = prompt("Nome da rota:");
+  if (!nome) return;
+
+  const rotas = JSON.parse(localStorage.getItem("rotas") || "[]");
+
+  rotas.push({
+    nome,
+    origem: origemAtual,
+    rota: rotaOrdenada,
+    link: linkAtual
+  });
+
+  localStorage.setItem("rotas", JSON.stringify(rotas));
+  listarRotas();
+  alert("⭐ Rota salva com sucesso");
 }
+
+function listarRotas() {
+  const sel = document.getElementById("rotasSelect");
+  if (!sel) return;
+
+  const rotas = JSON.parse(localStorage.getItem("rotas") || "[]");
+  sel.innerHTML = `<option value="">Selecione uma rota salva</option>`;
+
+  rotas.forEach((r, i) => {
+    sel.innerHTML += `<option value="${i}">${r.nome}</option>`;
+  });
+}
+
+function abrirRotaSelecionada() {
+  const sel = document.getElementById("rotasSelect");
+  const i = sel.value;
+
+  if (i === "") {
+    alert("Selecione uma rota");
+    return;
+  }
+
+  const rotas = JSON.parse(localStorage.getItem("rotas"));
+  const r = rotas[i];
+
+  origemAtual = r.origem;
+  rotaOrdenada = r.rota;
+  linkAtual = r.link;
+
+  window.open(linkAtual, "_blank");
+}
+
+function excluirRotaSelecionada() {
+  const sel = document.getElementById("rotasSelect");
+  const i = sel.value;
+
+  if (i === "") return;
+  if (!confirm("Deseja excluir esta rota?")) return;
+
+  const rotas = JSON.parse(localStorage.getItem("rotas"));
+  rotas.splice(i, 1);
+  localStorage.setItem("rotas", JSON.stringify(rotas));
+
+  listarRotas();
+}
+
+/* =========================
+   INIT
+========================= */
+listarClientesSelect();
+listarRotas();
