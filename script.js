@@ -49,27 +49,68 @@ function getClientes() {
   return JSON.parse(localStorage.getItem("clientes") || "[]");
 }
 
-function salvarClientes() {
+/* =========================
+  SAVAR CLIENTES
+========================= */
+async function salvarClientes() {
   const clientes = getClientes();
 
-  document.querySelectorAll(".destino").forEach(d => {
+  for (let d of document.querySelectorAll(".destino")) {
     const nomeInput = d.querySelector(".nome");
     const enderecoInput = d.querySelector(".endereco");
 
-    const nome = nomeInput.value.trim();
-    const endereco = enderecoInput.value.trim();
+    const nomeOriginal = nomeInput.value.trim();
+    const enderecoTxt = enderecoInput.value.trim();
 
-    if (!endereco) return;
+    if (!enderecoTxt) continue;
 
-    if (!clientes.some(c => c.endereco === endereco)) {
-      clientes.push({ nome, endereco });
+    // 🔍 Geocodificar para obter coordenada real
+    let geo;
+    try {
+      geo = await geocodificar(enderecoTxt);
+    } catch {
+      alert(`Endereço inválido:\n${enderecoTxt}`);
+      return;
     }
-  });
+
+    const nomeNormalizado = normalizarTexto(nomeOriginal);
+
+    // 🚫 Bloquear nome duplicado
+    if (
+      nomeNormalizado &&
+      clientes.some(c =>
+        normalizarTexto(c.nome || "") === nomeNormalizado
+      )
+    ) {
+      alert(`Já existe um cliente com o nome:\n"${nomeOriginal}"`);
+      return;
+    }
+
+    // 🚫 Bloquear endereço duplicado por coordenada
+    if (
+      clientes.some(c =>
+        mesmoLocal(c, geo)
+      )
+    ) {
+      alert(
+        "Este endereço já está salvo.\n" +
+        "Mesmo que esteja escrito de forma diferente."
+      );
+      return;
+    }
+
+    // ✅ Salvar
+    clientes.push({
+      nome: nomeOriginal,
+      endereco: geo.texto,
+      lat: geo.lat,
+      lon: geo.lon
+    });
+  }
 
   localStorage.setItem("clientes", JSON.stringify(clientes));
-  alert("Endereços salvos");
+  alert("Endereços salvos com sucesso");
 }
-
 /* =========================
    GERAR CAMPOS
 ========================= */
@@ -166,6 +207,33 @@ async function geocodificar(txt) {
     lat: +resultado.lat,
     lon: +resultado.lon
   };
+}
+
+/* =========================
+   NORMALIZAÇÃO / COMPARAÇÃO
+========================= */
+
+// remover acentos + normalizar texto
+function normalizarTexto(txt) {
+  return txt
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+// arredondar coordenadas (evita duplicações por micro variação)
+function normalizarCoordenada(valor, casas = 5) {
+  return Number(valor).toFixed(casas);
+}
+
+// verificar se dois pontos são o mesmo local
+function mesmoLocal(a, b) {
+  return (
+    normalizarCoordenada(a.lat) === normalizarCoordenada(b.lat) &&
+    normalizarCoordenada(a.lon) === normalizarCoordenada(b.lon)
+  );
 }
 
 /* =========================
