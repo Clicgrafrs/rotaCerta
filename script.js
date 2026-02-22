@@ -321,20 +321,19 @@ function abrirRotaSelecionada() {
   const rotas = JSON.parse(localStorage.getItem("rotas") || "[]");
   const r = rotas[i];
 
-  if (!r) {
-    alert("Rota não encontrada");
+  if (!r || !r.origem || !r.rota || !r.rota.length) {
+    alert("Rota salva inválida");
     return;
   }
 
-  // Restaurar estado
+  // Restaurar estado base
   origemAtual = r.origem;
-  rotaOrdenada = r.rota;
-  linkAtual = r.link;
+  destinosGlobais = r.rota;
 
-  // Mostrar novamente no painel
-  document.getElementById("resultado").innerHTML =
-    `<li><a href="${linkAtual}" target="_blank">🚗 Abrir rota salva</a></li>`;
+  // 🔥 REORDENAR e GERAR LINK NOVAMENTE
+  rotaOrdenada = ordenarPorProximidade(origemAtual, destinosGlobais);
+  gerarLink();
 
-  // Abrir automaticamente
+  // Abrir rota
   window.open(linkAtual, "_blank");
 }
