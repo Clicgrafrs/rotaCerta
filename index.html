@@ -2,161 +2,223 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
+
+  <!-- 🔑 ESSENCIAL PARA MOBILE -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
   <title>Rota Fácil PRO</title>
 
   <style>
     :root {
-  --bg: #0f172a;
-  --card: #e1e4e9;
-  --input: #dbffe7;
-  --primary: #428fc7;
-  --secondary: #428fc7;
-  --success: #22c55e;
-  --danger: #ef4444;
-  --text: #21252e;
-  --muted: #9ca3af;
-}
+      --bg: #0f172a;
+      --card: #e1e4e9;
+      --input: #dbffe7;
+      --primary: #428fc7;
+      --secondary: #428fc7;
+      --success: #22c55e;
+      --danger: #ef4444;
+      --text: #21252e;
+      --muted: #6b7280;
+    }
 
-* {
-  box-sizing: border-box;
-}
+    * {
+      box-sizing: border-box;
+    }
 
-body {
-  margin: 0;
-  background: linear-gradient(180deg, #e6e7eb, #209948);
-  font-family: 'Segoe UI', system-ui, sans-serif;
-  color: var(--text);
-}
+    body {
+      margin: 0;
+      background: linear-gradient(180deg, #e6e7eb, #209948);
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      color: var(--text);
+    }
 
-.app {
-  max-width: 430px;
-  margin: auto;
-  padding: 16px;
-}
+    /* =========================
+       CONTAINER PRINCIPAL
+    ========================= */
+    .app {
+      width: 100%;
+      max-width: 480px; /* mobile */
+      margin: auto;
+      padding: 16px;
+    }
 
-/* HEADER */
-.app-header {
-  text-align: center;
-  margin-bottom: 20px;
-}
+    /* =========================
+       HEADER
+    ========================= */
+    .app-header {
+      text-align: center;
+      margin-bottom: 20px;
+    }
 
-.app-header h1 {
-  margin: 0;
-  font-size: 1.6rem;
-}
+    .app-header h1 {
+      margin: 0;
+      font-size: 1.6rem;
+    }
 
-.version {
-  font-size: 0.8rem;
-  color: var(--muted);
-}
+    .version {
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
 
-/* CARDS */
-.card {
-  background: var(--card);
-  border-radius: 14px;
-  padding: 16px;
-  margin-bottom: 16px;
-  box-shadow: 0 10px 25px rgba(0,0,0,.35);
-}
+    /* =========================
+       CARDS
+    ========================= */
+    .card {
+      background: var(--card);
+      border-radius: 14px;
+      padding: 16px;
+      margin-bottom: 16px;
+      box-shadow: 0 10px 25px rgba(0,0,0,.25);
+    }
 
-.card h3, .card h4 {
-  margin-top: 0;
-}
+    .card h3,
+    .card h4 {
+      margin-top: 0;
+    }
 
-/* INPUTS */
-input, select {
-  width: 100%;
-  padding: 12px;
-  margin: 8px 0;
-  background: var(--input);
-  border: 1px solid #334155;
-  border-radius: 10px;
-  color: var(--text);
-  font-size: 15px;
-}
+    .card.destaque {
+      border: 1px solid var(--primary);
+    }
 
-input::placeholder {
-  color: var(--muted);
-}
+    /* =========================
+       INPUTS
+    ========================= */
+    input,
+    select {
+      width: 100%;
+      padding: 12px;
+      margin: 8px 0;
+      background: var(--input);
+      border: 1px solid #94a3b8;
+      border-radius: 10px;
+      font-size: 15px;
+      color: var(--text);
+    }
 
-/* BOTÕES */
-.btn {
-  width: 100%;
-  padding: 13px;
-  border: none;
-  border-radius: 12px;
-  font-size: 15px;
-  font-weight: 600;
-  margin-top: 8px;
-  cursor: pointer;
-}
+    input::placeholder {
+      color: var(--muted);
+    }
 
-.btn.primary { background: var(--primary); color: #fff; margin-bottom: 5px; }
-.btn.secondary { background: var(--secondary); color: #fff; }
-.btn.success { background: var(--success); color: #022c22; }
-.btn.danger { background: var(--danger); color: #fff; }
-.btn.star { background: #fab115; color: #422006; }
-.btn.ghost {
-  border: 1px dashed #334155;
-  background-color: #ef4444;
-}
+    input.erro {
+      border: 2px solid var(--danger);
+      background: #fde8e8;
+    }
 
-.btn:active {
-  transform: scale(.98);
-}
+    /* =========================
+       BOTÕES
+    ========================= */
+    .btn {
+      padding: 13px;
+      border: none;
+      border-radius: 12px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      width: 100%;
+    }
 
-/* DESTAQUE */
-.card.destaque {
-  border: 1px solid var(--primary);
-}
+    .btn.primary { background: var(--primary); color: #fff; }
+    .btn.secondary { background: var(--secondary); color: #fff; }
+    .btn.success { background: var(--success); color: #064e3b; }
+    .btn.danger { background: var(--danger); color: #fff; }
+    .btn.star { background: #fab115; color: #422006; }
+    .btn.ghost {
+      background: transparent;
+      border: 1px dashed #64748b;
+      color: #334155;
+    }
 
-/* DESTINOS */
-.destino {
-  background: #bbc8ff;
-  padding: 12px;
-  border-radius: 10px;
-  margin-bottom: 10px;
-}
+    .btn:active {
+      transform: scale(0.97);
+    }
 
-/* RESULTADO */
-.resultado li a {
-  color: #60a5fa;
-  text-decoration: none;
-  font-weight: bold;
-}
+    /* =========================
+       DESTINOS
+    ========================= */
+    .destino {
+      background: #bbc8ff;
+      padding: 12px;
+      border-radius: 10px;
+      margin-bottom: 10px;
+    }
 
-/* LINHA */
-.row {
-  display: flex;
-  gap: 10px;
-}
+    /* =========================
+       RESULTADO
+    ========================= */
+    .resultado li a {
+      color: #1d4ed8;
+      text-decoration: none;
+      font-weight: bold;
+    }
 
-/* INFO */
-.info {
-  color: var(--success);
-  font-size: 0.85rem;
-}
+    /* =========================
+       FLEX / BOTÕES AGRUPADOS
+    ========================= */
+    .row,
+    .container-botoes,
+    .container-botoes2 {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
 
-/* ERRO */
-input.erro {
-  border: 2px solid var(--danger);
-  background: #2a0f14;
-}
+    .row .btn,
+    .container-botoes .btn,
+    .container-botoes2 .btn {
+      flex: 1;
+    }
 
-/*BOTAO SALVAR E GERAR*/
-.container-botoes {
-    display: flex; /* Ativa o modo flexbox */
-    gap: 10px; /* Adiciona espaço entre os botões */
-    justify-content: center; /* Centraliza (opcional) */
-}
+    /* =========================
+       INFO
+    ========================= */
+    .info {
+      font-size: 0.85rem;
+      color: var(--success);
+    }
 
-/*BOTAO ADICIONAR PARADA E SALVAR ROTA*/
-.container-botoes2 {
-    display: flex; /* Ativa o modo flexbox */
-    gap: 10px; /* Adiciona espaço entre os botões */
-    justify-content: center; /* Centraliza (opcional) */
-}
+    /* =========================
+       TABLET
+    ========================= */
+    @media (min-width: 768px) {
+      .app {
+        max-width: 700px;
+        padding: 24px;
+      }
 
+      .btn {
+        font-size: 16px;
+      }
+    }
+
+    /* =========================
+       DESKTOP
+    ========================= */
+    @media (min-width: 1024px) {
+      .app {
+        max-width: 900px;
+      }
+
+      .btn {
+        width: auto;
+        min-width: 180px;
+      }
+    }
+
+    /* =========================
+       CELULARES MUITO PEQUENOS
+    ========================= */
+    @media (max-width: 360px) {
+      input,
+      select {
+        font-size: 14px;
+        padding: 10px;
+      }
+
+      .btn {
+        font-size: 14px;
+        padding: 12px;
+      }
+    }
   </style>
 </head>
 
@@ -172,13 +234,8 @@ input.erro {
   <!-- ORIGEM -->
   <section class="card">
     <h3>Ponto de partida</h3>
-
     <input type="text" id="origem" placeholder="Digite o ponto de partida">
-    
-    <button class="btn secondary" onclick="usarLocalizacao()">
-      📍 Usar minha localização
-    </button>
-
+    <button class="btn secondary" onclick="usarLocalizacao()">📍 Usar minha localização</button>
     <small id="infoLocalizacao" class="info"></small>
   </section>
 
@@ -189,45 +246,25 @@ input.erro {
     <label>Quantas paradas?</label>
     <input type="number" id="qtd" min="1" max="10" value="2">
 
-    <button class="btn primary" onclick="gerarCampos()">
-      ➕ Gerar destinos
-    </button>
-    
+    <button class="btn primary" onclick="gerarCampos()">➕ Gerar destinos</button>
+
     <div id="enderecos"></div>
 
-   <div class="container-botoes">
-     <button class="btn ghost" onclick="salvarClientes()">
-      💾 Salvar endereços / clientes
-    </button>
-    
-    <button class="btn success" onclick="calcularRota()">
-      🚀 Calcular rota otimizada
-    </button>
-   </div>
-
-   
-    
+    <div class="container-botoes">
+      <button class="btn ghost" onclick="salvarClientes()">💾 Salvar endereços</button>
+      <button class="btn success" onclick="calcularRota()">🚀 Calcular rota</button>
+    </div>
   </section>
 
-  <!-- ROTA -->
+  <!-- ADICIONAR PARADA -->
   <section class="card destaque">
-    
-
-    <hr>
-
-    <h4 style="text-align: center;">Adicionar parada durante a rota</h4>
+    <h4 style="text-align:center;">Adicionar parada durante a rota</h4>
     <input type="text" id="novaParada" placeholder="Digite o endereço da nova parada">
 
     <div class="container-botoes2">
-    <button class="btn secondary" onclick="adicionarParada()">
-      ➕ Adicionar parada
-    </button>
-
-    <button class="btn star" onclick="salvarRota()">
-      ⭐ Salvar esta rota
-    </button>
+      <button class="btn secondary" onclick="adicionarParada()">➕ Adicionar parada</button>
+      <button class="btn star" onclick="salvarRota()">⭐ Salvar rota</button>
     </div>
-    
   </section>
 
   <!-- RESULTADO -->
@@ -239,7 +276,6 @@ input.erro {
   <!-- ROTAS SALVAS -->
   <section class="card">
     <h3>📂 Rotas salvas</h3>
-
     <select id="rotasSelect">
       <option value="">Selecione uma rota salva</option>
     </select>
@@ -254,5 +290,4 @@ input.erro {
 
 <script src="script.js"></script>
 </body>
-  
 </html>
