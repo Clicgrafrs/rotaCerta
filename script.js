@@ -360,3 +360,42 @@ function abrirRotaSelecionada() {
   // Abrir rota
   window.open(linkAtual, "_blank");
 }
+
+
+/* =========================
+   EXCLUIR ROTA SELECIONADA
+========================= */
+function excluirRotaSelecionada() {
+  const sel = document.getElementById("rotasSelect");
+  const i = sel.value;
+
+  if (i === "") {
+    alert("Selecione uma rota para excluir");
+    return;
+  }
+
+  const rotas = JSON.parse(localStorage.getItem("rotas") || "[]");
+
+  if (!rotas[i]) {
+    alert("Rota inválida");
+    return;
+  }
+
+  if (!confirm(`Excluir a rota "${rotas[i].nome}"?`)) return;
+
+  // 🗑 Remover rota
+  rotas.splice(Number(i), 1);
+  localStorage.setItem("rotas", JSON.stringify(rotas));
+
+  // 🔄 Resetar estado atual
+  origemAtual = null;
+  destinosGlobais = [];
+  rotaOrdenada = [];
+  linkAtual = null;
+
+  // 🔄 Atualizar UI
+  listarRotas();
+  document.getElementById("resultado").innerHTML = "";
+
+  alert("Rota excluída com sucesso");
+}
