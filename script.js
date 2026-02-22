@@ -115,11 +115,10 @@ function gerarCampos() {
 }
 
 /* =========================
-   GEO + DISTÂNCIA
+   GEO + DISTÂNCIA (CORRIGIDO)
 ========================= */
 async function geocodificar(txt) {
   const texto = txt.trim();
-
   const palavras = texto.split(/\s+/).filter(p => p.length > 2);
 
   if (palavras.length < 2) {
@@ -139,17 +138,22 @@ async function geocodificar(txt) {
     throw new Error(`Endereço não encontrado:\n${texto}`);
   }
 
-  const resultado = d.find(item =>
-    item.address &&
-    item.address.state &&
-    (
-      item.address.city ||
-      item.address.town ||
-      item.address.village ||
-      item.address.municipality ||
-      (item.address.suburb && item.address.postcode)
-    )
-  );
+  const resultado = d.find(item => {
+    const a = item.address || {};
+    return (
+      item.lat &&
+      item.lon &&
+      a.state &&
+      (
+        a.city ||
+        a.town ||
+        a.village ||
+        a.municipality ||
+        a.suburb ||
+        a.road
+      )
+    );
+  });
 
   if (!resultado) {
     throw new Error(
@@ -164,41 +168,14 @@ async function geocodificar(txt) {
   };
 }
 
-
 /* =========================
    ORDENAR POR PROXIMIDADE
 ========================= */
 function ordenarPorProximidade(origem, destinos) {
-  // Primeiro: ordena por distância direta da origem
-  const ordenadosPorOrigem = [...destinos].sort((a, b) =>
+  return [...destinos].sort((a, b) =>
     calcularDistancia(origem.lat, origem.lon, a.lat, a.lon) -
     calcularDistancia(origem.lat, origem.lon, b.lat, b.lon)
   );
-
-  return ordenadosPorOrigem;
-}
-
-  while (restantes.length) {
-    let menorDist = Infinity;
-    let indiceMaisProximo = 0;
-
-    restantes.forEach((d, i) => {
-      const dist = calcularDistancia(
-        atual.lat, atual.lon,
-        d.lat, d.lon
-      );
-
-      if (dist < menorDist) {
-        menorDist = dist;
-        indiceMaisProximo = i;
-      }
-    });
-
-    atual = restantes.splice(indiceMaisProximo, 1)[0];
-    rota.push(atual);
-  }
-
-  return rota;
 }
 
 /* =========================
@@ -217,7 +194,6 @@ function calcularDistancia(lat1, lon1, lat2, lon2) {
 
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
-
 
 /* =========================
    CALCULAR ROTA
@@ -241,18 +217,11 @@ async function calcularRota() {
 
     for (let input of document.querySelectorAll(".endereco")) {
       limparErro(input);
-
       if (!input.value.trim()) {
         marcarErro(input);
         return alert("Preencha todos os endereços de destino");
       }
-
-      try {
-        destinosGlobais.push(await geocodificar(input.value));
-      } catch {
-        marcarErro(input);
-        return alert(`Endereço inválido:\n${input.value}`);
-      }
+      destinosGlobais.push(await geocodificar(input.value));
     }
 
     rotaOrdenada = ordenarPorProximidade(origemAtual, destinosGlobais);
@@ -264,76 +233,50 @@ async function calcularRota() {
 }
 
 /* =========================
-   GERAR LINK (ANDROID + iOS)
+   GERAR LINK
 ========================= */
 function gerarLink() {
   if (!rotaOrdenada.length) return;
 
   if (isIOS()) {
-    const pontos = [
-      origemAtual.texto,
-      ...rotaOrdenada.map(r => r.texto)
-    ].join("+to:");
-
+    const pontos = [origemAtual.texto, ...rotaOrdenada.map(r => r.texto)].join("+to:");
     linkAtual = `https://maps.apple.com/?daddr=${encodeURIComponent(pontos)}`;
-
-    document.getElementById("resultado").innerHTML =
-      `<li><a href="${linkAtual}" target="_blank">🍎 Abrir rota no Apple Maps</a></li>`;
   } else {
     const o = encodeURIComponent(origemAtual.texto);
     const d = encodeURIComponent(rotaOrdenada.at(-1).texto);
-    const w = rotaOrdenada.slice(0, -1)
-      .map(r => encodeURIComponent(r.texto))
-      .join("|");
-
+    const w = rotaOrdenada.slice(0, -1).map(r => encodeURIComponent(r.texto)).join("|");
     linkAtual =
       `https://www.google.com/maps/dir/?api=1&origin=${o}&destination=${d}&travelmode=driving` +
       (w ? `&waypoints=${w}` : "");
-
-    document.getElementById("resultado").innerHTML =
-      `<li><a href="${linkAtual}" target="_blank">🚗 Abrir rota otimizada no Google Maps</a></li>`;
   }
+
+  document.getElementById("resultado").innerHTML =
+    `<li><a href="${linkAtual}" target="_blank">🚗 Abrir rota otimizada</a></li>`;
 }
 
 /* =========================
    ADICIONAR PARADA
 ========================= */
 async function adicionarParada() {
-  try {
-    if (!rotaOrdenada.length)
-      return alert("Calcule ou abra uma rota antes");
+  if (!rotaOrdenada.length)
+    return alert("Calcule ou abra uma rota antes");
 
-    const input = document.getElementById("novaParada");
-    const txt = input.value.trim();
-    limparErro(input);
+  const input = document.getElementById("novaParada");
+  const txt = input.value.trim();
+  limparErro(input);
 
-    if (!txt) {
-      marcarErro(input);
-      return alert("Digite o endereço da nova parada");
-    }
-
-    let novaParada;
-    try {
-      novaParada = await geocodificar(txt);
-    } catch {
-      marcarErro(input);
-      return alert("Endereço da nova parada inválido");
-    }
-
-    // 🔁 Mantém a lista global correta
-    destinosGlobais.push(novaParada);
-
-    // 🔄 Reotimiza TODA a rota a partir da origem
-    rotaOrdenada = ordenarPorProximidade(origemAtual, destinosGlobais);
-
-    input.value = "";
-    gerarLink();
-
-  } catch (e) {
-    alert(e.message);
+  if (!txt) {
+    marcarErro(input);
+    return alert("Digite o endereço da nova parada");
   }
-}
 
+  const novaParada = await geocodificar(txt);
+  destinosGlobais.push(novaParada);
+  rotaOrdenada = ordenarPorProximidade(origemAtual, destinosGlobais);
+
+  input.value = "";
+  gerarLink();
+}
 
 /* =========================
    ROTAS SALVAS
@@ -345,13 +288,7 @@ function salvarRota() {
   if (!nome) return;
 
   const rotas = JSON.parse(localStorage.getItem("rotas") || "[]");
-  rotas.push({
-    nome,
-    origem: origemAtual,
-    rota: rotaOrdenada,
-    link: linkAtual
-  });
-
+  rotas.push({ nome, origem: origemAtual, rota: rotaOrdenada, link: linkAtual });
   localStorage.setItem("rotas", JSON.stringify(rotas));
   listarRotas();
 }
@@ -360,30 +297,7 @@ function listarRotas() {
   const sel = document.getElementById("rotasSelect");
   sel.innerHTML = `<option value="">Selecione uma rota salva</option>`;
   JSON.parse(localStorage.getItem("rotas") || "[]")
-    .forEach((r, i) =>
-      sel.innerHTML += `<option value="${i}">${r.nome}</option>`
-    );
-}
-
-function abrirRotaSelecionada() {
-  const i = document.getElementById("rotasSelect").value;
-  if (i === "") return alert("Selecione uma rota");
-
-  const r = JSON.parse(localStorage.getItem("rotas"))[i];
-  origemAtual = r.origem;
-  rotaOrdenada = r.rota;
-  gerarLink();
-  window.open(linkAtual, "_blank");
-}
-
-function excluirRotaSelecionada() {
-  const i = document.getElementById("rotasSelect").value;
-  if (i === "") return;
-
-  const rotas = JSON.parse(localStorage.getItem("rotas"));
-  rotas.splice(i, 1);
-  localStorage.setItem("rotas", JSON.stringify(rotas));
-  listarRotas();
+    .forEach((r, i) => sel.innerHTML += `<option value="${i}">${r.nome}</option>`);
 }
 
 listarRotas();
