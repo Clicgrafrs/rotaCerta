@@ -195,7 +195,7 @@ function gerarCampos() {
     d.className = "destino";
 
     const sel = document.createElement("select");
-    sel.innerHTML = `<option value="">Cliente salvo</option>`;
+    sel.innerHTML = `<option value="">Buscar endereço salvo</option>`;
     clientes.forEach((c, idx) => {
       sel.innerHTML += `
         <option value="${idx}">
