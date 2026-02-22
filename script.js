@@ -367,34 +367,37 @@ function abrirRotaSelecionada() {
 ========================= */
 function excluirRotaSelecionada() {
   const sel = document.getElementById("rotasSelect");
-  const i = sel.value;
+  const indice = Number(sel.value);
 
-  if (i === "") {
+  if (isNaN(indice)) {
     alert("Selecione uma rota para excluir");
     return;
   }
 
   const rotas = JSON.parse(localStorage.getItem("rotas") || "[]");
 
-  if (!rotas[i]) {
-    alert("Rota inválida");
+  if (!rotas[indice]) {
+    alert("Rota inválida ou já removida");
+    listarRotas();
+    sel.value = "";
     return;
   }
 
-  if (!confirm(`Excluir a rota "${rotas[i].nome}"?`)) return;
+  if (!confirm(`Excluir a rota "${rotas[indice].nome}"?`)) return;
 
   // 🗑 Remover rota
-  rotas.splice(Number(i), 1);
+  rotas.splice(indice, 1);
   localStorage.setItem("rotas", JSON.stringify(rotas));
 
-  // 🔄 Resetar estado atual
+  // 🔄 Resetar estado interno
   origemAtual = null;
   destinosGlobais = [];
   rotaOrdenada = [];
   linkAtual = null;
 
-  // 🔄 Atualizar UI
+  // 🔄 Resetar UI
   listarRotas();
+  sel.value = "";
   document.getElementById("resultado").innerHTML = "";
 
   alert("Rota excluída com sucesso");
