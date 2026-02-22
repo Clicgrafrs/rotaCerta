@@ -301,3 +301,40 @@ function listarRotas() {
 }
 
 listarRotas();
+
+
+
+
+/* =========================
+   ABRIR ROTAS SALVAS
+========================= */
+
+function abrirRotaSelecionada() {
+  const sel = document.getElementById("rotasSelect");
+  const i = sel.value;
+
+  if (i === "") {
+    alert("Selecione uma rota salva");
+    return;
+  }
+
+  const rotas = JSON.parse(localStorage.getItem("rotas") || "[]");
+  const r = rotas[i];
+
+  if (!r) {
+    alert("Rota não encontrada");
+    return;
+  }
+
+  // Restaurar estado
+  origemAtual = r.origem;
+  rotaOrdenada = r.rota;
+  linkAtual = r.link;
+
+  // Mostrar novamente no painel
+  document.getElementById("resultado").innerHTML =
+    `<li><a href="${linkAtual}" target="_blank">🚗 Abrir rota salva</a></li>`;
+
+  // Abrir automaticamente
+  window.open(linkAtual, "_blank");
+}
