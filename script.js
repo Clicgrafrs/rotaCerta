@@ -120,16 +120,17 @@ function gerarCampos() {
 async function geocodificar(txt) {
   const texto = txt.trim();
 
-  // 1️⃣ Regras mínimas ANTES da API
-  const palavras = texto.split(" ").filter(p => p.length > 2);
+  // 1️⃣ Validação básica ANTES da API
+  const palavras = texto.split(/\s+/).filter(p => p.length > 2);
 
   if (texto.length < 10 || palavras.length < 3) {
     throw new Error(
-      "Endereço muito curto ou genérico.\nExemplo válido:\nSupermercado Dalpiaz Osório RS"
+      "Endereço muito curto ou genérico.\n" +
+      "Exemplo válido:\nSupermercado Dalpiaz Osório RS"
     );
   }
 
-  // 2️⃣ Chamada à API
+  // 2️⃣ Consulta ao Nominatim
   const r = await fetch(
     `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=5&q=${encodeURIComponent(texto)}`
   );
@@ -140,29 +141,20 @@ async function geocodificar(txt) {
     throw new Error(`Endereço não encontrado:\n${texto}`);
   }
 
-  const resultado = d[0];
+  // 3️⃣ Aceitar locais reais (com cidade + estado)
+  const resultado = d.find(item =>
+    item.address &&
+    (
+      item.address.city ||
+      item.address.town ||
+      item.address.village
+    ) &&
+    item.address.state
+  );
 
-  // 3️⃣ Confiança do resultado
-  if (
-    resultado.importance < 0.3 || // resultado pouco relevante
-    !resultado.display_name ||
-    !resultado.address ||
-    !(
-      resultado.address.city ||
-      resultado.address.town ||
-      resultado.address.village
-    )
-  ) {
+  if (!resultado) {
     throw new Error(
-      "Endereço genérico ou impreciso.\nInclua nome do local + cidade + estado."
-    );
-  }
-
-  // 4️⃣ Rejeitar se o texto não aparece no nome retornado
-  const nomeRetornado = resultado.display_name.toLowerCase();
-  if (!nomeRetornado.includes(palavras[0].toLowerCase())) {
-    throw new Error(
-      "Endereço não corresponde a um local específico.\nDigite o nome completo do local."
+      "Endereço impreciso.\nInclua nome do local + cidade + estado."
     );
   }
 
