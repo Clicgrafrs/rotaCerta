@@ -118,47 +118,54 @@ function gerarCampos() {
    GEO + DISTÂNCIA
 ========================= */
 async function geocodificar(txt) {
+  const texto = txt.trim();
+
+  // 🔎 Validação semântica mínima antes da API
+  if (texto.length < 8 || texto.split(" ").length < 2) {
+    throw new Error(
+      "Endereço muito curto ou genérico.\nDigite um local real, por exemplo:\nSupermercado Dalpiaz Osório RS"
+    );
+  }
+
   const r = await fetch(
-    `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(txt)}`
+    `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&q=${encodeURIComponent(texto)}`
   );
+
   const d = await r.json();
 
   if (!d.length) {
-    throw new Error(`Endereço inválido ou não encontrado:\n${txt}`);
+    throw new Error(`Endereço não encontrado:\n${texto}`);
   }
 
-  return { texto: txt, lat: +d[0].lat, lon: +d[0].lon };
-}
+  const resultado = d[0];
 
-function distancia(a, b) {
-  const R = 6371;
-  const dLat = (b.lat - a.lat) * Math.PI / 180;
-  const dLon = (b.lon - a.lon) * Math.PI / 180;
-  const x =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(a.lat * Math.PI / 180) *
-    Math.cos(b.lat * Math.PI / 180) *
-    Math.sin(dLon / 2) ** 2;
-  return R * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x));
-}
+  // 🧠 Filtro de tipo de local aceito
+  const tiposValidos = [
+    "amenity",
+    "shop",
+    "building",
+    "highway",
+    "road",
+    "residential",
+    "commercial",
+    "industrial",
+    "retail"
+  ];
 
-function ordenarPorProximidade(origem, destinos) {
-  let atual = origem;
-  let restantes = [...destinos];
-  let rota = [];
-
-  while (restantes.length) {
-    let idx = 0;
-    for (let i = 1; i < restantes.length; i++) {
-      if (distancia(atual, restantes[i]) < distancia(atual, restantes[idx])) {
-        idx = i;
-      }
-    }
-    atual = restantes[idx];
-    rota.push(restantes.splice(idx, 1)[0]);
+  if (
+    !resultado.class ||
+    !tiposValidos.includes(resultado.class)
+  ) {
+    throw new Error(
+      "Endereço muito genérico ou inválido.\nInforme um local, rua ou estabelecimento real."
+    );
   }
 
-  return rota;
+  return {
+    texto,
+    lat: +resultado.lat,
+    lon: +resultado.lon
+  };
 }
 
 /* =========================
