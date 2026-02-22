@@ -6,6 +6,18 @@ let rotaOrdenada = [];
 let linkAtual = null;
 
 /* =========================
+   ERRO VISUAL
+========================= */
+function marcarErro(el) {
+  el.classList.add("erro");
+  el.focus();
+}
+
+function limparErro(el) {
+  el.classList.remove("erro");
+}
+
+/* =========================
    DETECTAR iOS
 ========================= */
 function isIOS() {
@@ -41,8 +53,12 @@ function salvarClientes() {
   const clientes = getClientes();
 
   document.querySelectorAll(".destino").forEach(d => {
-    const nome = d.querySelector(".nome").value.trim();
-    const endereco = d.querySelector(".endereco").value.trim();
+    const nomeInput = d.querySelector(".nome");
+    const enderecoInput = d.querySelector(".endereco");
+
+    const nome = nomeInput.value.trim();
+    const endereco = enderecoInput.value.trim();
+
     if (!endereco) return;
 
     if (!clientes.some(c => c.endereco === endereco)) {
@@ -79,6 +95,7 @@ function gerarCampos() {
     const end = document.createElement("input");
     end.className = "endereco";
     end.placeholder = "Endereço *";
+    end.oninput = () => limparErro(end);
 
     const nome = document.createElement("input");
     nome.className = "nome";
@@ -89,6 +106,7 @@ function gerarCampos() {
       const [e, n] = sel.value.split("|");
       end.value = e;
       nome.value = n;
+      limparErro(end);
     };
 
     d.append(sel, end, nome);
@@ -100,21 +118,16 @@ function gerarCampos() {
    GEO + DISTÂNCIA
 ========================= */
 async function geocodificar(txt) {
-  try {
-    const r = await fetch(
-      `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(txt)}`
-    );
-    const d = await r.json();
+  const r = await fetch(
+    `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(txt)}`
+  );
+  const d = await r.json();
 
-    if (!d.length) {
-      throw new Error(`Endereço inválido ou não encontrado:\n${txt}`);
-    }
-
-    return { texto: txt, lat: +d[0].lat, lon: +d[0].lon };
-
-  } catch (e) {
-    throw new Error(e.message || "Erro ao localizar endereço");
+  if (!d.length) {
+    throw new Error(`Endereço inválido ou não encontrado:\n${txt}`);
   }
+
+  return { texto: txt, lat: +d[0].lat, lon: +d[0].lon };
 }
 
 function distancia(a, b) {
@@ -122,11 +135,11 @@ function distancia(a, b) {
   const dLat = (b.lat - a.lat) * Math.PI / 180;
   const dLon = (b.lon - a.lon) * Math.PI / 180;
   const x =
-    Math.sin(dLat/2)**2 +
-    Math.cos(a.lat*Math.PI/180) *
-    Math.cos(b.lat*Math.PI/180) *
-    Math.sin(dLon/2)**2;
-  return R * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1-x));
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(a.lat * Math.PI / 180) *
+    Math.cos(b.lat * Math.PI / 180) *
+    Math.sin(dLon / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x));
 }
 
 function ordenarPorProximidade(origem, destinos) {
@@ -153,21 +166,35 @@ function ordenarPorProximidade(origem, destinos) {
 ========================= */
 async function calcularRota() {
   try {
-    const origemTxt = document.getElementById("origem").value.trim();
+    const origemInput = document.getElementById("origem");
+    const origemTxt = origemInput.value.trim();
+    limparErro(origemInput);
 
-    if (!origemAtual && !origemTxt)
+    if (!origemAtual && !origemTxt) {
+      marcarErro(origemInput);
       return alert("Informe o ponto de partida");
+    }
 
-    if (!origemAtual)
+    if (!origemAtual) {
       origemAtual = await geocodificar(origemTxt);
+    }
 
     destinosGlobais = [];
 
-    for (let i of document.querySelectorAll(".endereco")) {
-      if (!i.value.trim())
-        return alert("Preencha todos os endereços de destino");
+    for (let input of document.querySelectorAll(".endereco")) {
+      limparErro(input);
 
-      destinosGlobais.push(await geocodificar(i.value));
+      if (!input.value.trim()) {
+        marcarErro(input);
+        return alert("Preencha todos os endereços de destino");
+      }
+
+      try {
+        destinosGlobais.push(await geocodificar(input.value));
+      } catch {
+        marcarErro(input);
+        return alert(`Endereço inválido:\n${input.value}`);
+      }
     }
 
     rotaOrdenada = ordenarPorProximidade(origemAtual, destinosGlobais);
@@ -194,11 +221,10 @@ function gerarLink() {
 
     document.getElementById("resultado").innerHTML =
       `<li><a href="${linkAtual}" target="_blank">🍎 Abrir rota no Apple Maps</a></li>`;
-
   } else {
     const o = encodeURIComponent(origemAtual.texto);
     const d = encodeURIComponent(rotaOrdenada.at(-1).texto);
-    const w = rotaOrdenada.slice(0,-1)
+    const w = rotaOrdenada.slice(0, -1)
       .map(r => encodeURIComponent(r.texto))
       .join("|");
 
@@ -219,11 +245,23 @@ async function adicionarParada() {
     if (!rotaOrdenada.length)
       return alert("Calcule ou abra uma rota antes");
 
-    const txt = document.getElementById("novaParada").value.trim();
-    if (!txt) return alert("Digite o endereço da nova parada");
+    const input = document.getElementById("novaParada");
+    const txt = input.value.trim();
+    limparErro(input);
 
-    rotaOrdenada.push(await geocodificar(txt));
-    document.getElementById("novaParada").value = "";
+    if (!txt) {
+      marcarErro(input);
+      return alert("Digite o endereço da nova parada");
+    }
+
+    try {
+      rotaOrdenada.push(await geocodificar(txt));
+    } catch {
+      marcarErro(input);
+      return alert("Endereço da nova parada inválido");
+    }
+
+    input.value = "";
     gerarLink();
 
   } catch (e) {
@@ -256,7 +294,9 @@ function listarRotas() {
   const sel = document.getElementById("rotasSelect");
   sel.innerHTML = `<option value="">Selecione uma rota salva</option>`;
   JSON.parse(localStorage.getItem("rotas") || "[]")
-    .forEach((r,i) => sel.innerHTML += `<option value="${i}">${r.nome}</option>`);
+    .forEach((r, i) =>
+      sel.innerHTML += `<option value="${i}">${r.nome}</option>`
+    );
 }
 
 function abrirRotaSelecionada() {
@@ -275,7 +315,7 @@ function excluirRotaSelecionada() {
   if (i === "") return;
 
   const rotas = JSON.parse(localStorage.getItem("rotas"));
-  rotas.splice(i,1);
+  rotas.splice(i, 1);
   localStorage.setItem("rotas", JSON.stringify(rotas));
   listarRotas();
 }
