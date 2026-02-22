@@ -226,11 +226,13 @@ async function calcularRota() {
 
     rotaOrdenada = ordenarPorProximidade(origemAtual, destinosGlobais);
     gerarLink();
+    focarRoteiro();
 
   } catch (e) {
     alert(e.message);
   }
 }
+
 
 /* =========================
    GERAR LINK
@@ -253,6 +255,27 @@ function gerarLink() {
   document.getElementById("resultado").innerHTML =
     `<li><a href="${linkAtual}" target="_blank">🚗 Abrir rota otimizada</a></li>`;
 }
+
+
+/* =========================
+   FOCAR NO GERAR LINK
+========================= */
+
+function focarRoteiro() {
+  const secao = document.getElementById("secaoRoteiro");
+  if (!secao) return;
+
+  secao.scrollIntoView({
+    behavior: "smooth",
+    block: "start"
+  });
+
+  // destaque visual temporário
+  secao.classList.add("destaque");
+  setTimeout(() => secao.classList.remove("destaque"), 1500);
+}
+
+
 
 /* =========================
    ADICIONAR PARADA
