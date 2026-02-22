@@ -187,7 +187,7 @@ async function salvarClientes() {
   alert(
     `Salvamento concluído:\n` +
     `✅ Novos: ${salvos}\n` +
-    `⚠️ Ignorados: ${ignorados}`
+
   );
 }
 
