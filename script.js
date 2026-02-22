@@ -308,12 +308,19 @@ async function adicionarParada() {
       return alert("Digite o endereço da nova parada");
     }
 
+    let novaParada;
     try {
-      rotaOrdenada.push(await geocodificar(txt));
+      novaParada = await geocodificar(txt);
     } catch {
       marcarErro(input);
       return alert("Endereço da nova parada inválido");
     }
+
+    // 🔁 Mantém a lista global correta
+    destinosGlobais.push(novaParada);
+
+    // 🔄 Reotimiza TODA a rota a partir da origem
+    rotaOrdenada = ordenarPorProximidade(origemAtual, destinosGlobais);
 
     input.value = "";
     gerarLink();
@@ -322,6 +329,7 @@ async function adicionarParada() {
     alert(e.message);
   }
 }
+
 
 /* =========================
    ROTAS SALVAS
