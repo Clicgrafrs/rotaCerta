@@ -120,41 +120,40 @@ function gerarCampos() {
 async function geocodificar(txt) {
   const texto = txt.trim();
 
-  // 1️⃣ Validação básica ANTES da API
   const palavras = texto.split(/\s+/).filter(p => p.length > 2);
 
-  if (texto.length < 10 || palavras.length < 3) {
+  if (palavras.length < 2) {
     throw new Error(
-      "Endereço muito curto ou genérico.\n" +
+      "Endereço muito genérico.\n" +
       "Exemplo válido:\nSupermercado Dalpiaz Osório RS"
     );
   }
 
-  // 2️⃣ Consulta ao Nominatim
   const r = await fetch(
-    `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=5&q=${encodeURIComponent(texto)}`
+    `https://nominatim.openstreetmap.org/search?` +
+    `format=json&addressdetails=1&limit=5&countrycodes=br&q=${encodeURIComponent(texto)}`
   );
 
   const d = await r.json();
-
   if (!d.length) {
     throw new Error(`Endereço não encontrado:\n${texto}`);
   }
 
-  // 3️⃣ Aceitar locais reais (com cidade + estado)
   const resultado = d.find(item =>
     item.address &&
+    item.address.state &&
     (
       item.address.city ||
       item.address.town ||
-      item.address.village
-    ) &&
-    item.address.state
+      item.address.village ||
+      item.address.municipality ||
+      (item.address.suburb && item.address.postcode)
+    )
   );
 
   if (!resultado) {
     throw new Error(
-      "Endereço impreciso.\nInclua nome do local + cidade + estado."
+      "Endereço impreciso.\nInclua cidade e estado."
     );
   }
 
@@ -170,9 +169,14 @@ async function geocodificar(txt) {
    ORDENAR POR PROXIMIDADE
 ========================= */
 function ordenarPorProximidade(origem, destinos) {
-  const restantes = [...destinos];
-  const rota = [];
-  let atual = origem;
+  // Primeiro: ordena por distância direta da origem
+  const ordenadosPorOrigem = [...destinos].sort((a, b) =>
+    calcularDistancia(origem.lat, origem.lon, a.lat, a.lon) -
+    calcularDistancia(origem.lat, origem.lon, b.lat, b.lon)
+  );
+
+  return ordenadosPorOrigem;
+}
 
   while (restantes.length) {
     let menorDist = Infinity;
