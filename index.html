@@ -226,7 +226,7 @@
   <header class="app-header">
       <img src="img/logo_rota.png" width="300">
     <br>
-    <span class="version">v1.4.0</span>
+    <span class="version">v1.4.1</span>
   </header>
 
   <!-- ORIGEM -->
@@ -253,6 +253,22 @@
       <button class="btn success" onclick="calcularRota()">🚀 Calcular rota</button>
     </div>
   </section>
+  
+  
+  <!-- CLIENTES SALVOS -->
+<section class="card">
+  <h3>👥 Clientes salvos</h3>
+
+  <select id="clientesSelect">
+    <option value="">Selecione um cliente</option>
+  </select>
+
+  <button class="btn danger" onclick="excluirClienteSelecionado()">
+    🗑️ Excluir cliente
+  </button>
+</section>
+  
+  
 
   <!-- ADICIONAR PARADA -->
   <section class="card destaque">
