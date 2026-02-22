@@ -7,13 +7,13 @@
   <style>
     :root {
   --bg: #0f172a;
-  --card: #111827;
-  --input: #1f2933;
-  --primary: #3b82f6;
-  --secondary: #0ea5e9;
+  --card: #e1e4e9;
+  --input: #dbffe7;
+  --primary: #428fc7;
+  --secondary: #428fc7;
   --success: #22c55e;
   --danger: #ef4444;
-  --text: #e5e7eb;
+  --text: #21252e;
   --muted: #9ca3af;
 }
 
@@ -23,7 +23,7 @@
 
 body {
   margin: 0;
-  background: linear-gradient(180deg, #020617, #0f172a);
+  background: linear-gradient(180deg, #e6e7eb, #209948);
   font-family: 'Segoe UI', system-ui, sans-serif;
   color: var(--text);
 }
@@ -91,15 +91,14 @@ input::placeholder {
   cursor: pointer;
 }
 
-.btn.primary { background: var(--primary); color: #fff; }
+.btn.primary { background: var(--primary); color: #fff; margin-bottom: 5px; }
 .btn.secondary { background: var(--secondary); color: #fff; }
 .btn.success { background: var(--success); color: #022c22; }
 .btn.danger { background: var(--danger); color: #fff; }
-.btn.star { background: #facc15; color: #422006; }
+.btn.star { background: #fab115; color: #422006; }
 .btn.ghost {
-  background: transparent;
   border: 1px dashed #334155;
-  color: var(--muted);
+  background-color: #ef4444;
 }
 
 .btn:active {
@@ -113,7 +112,7 @@ input::placeholder {
 
 /* DESTINOS */
 .destino {
-  background: #020617;
+  background: #bbc8ff;
   padding: 12px;
   border-radius: 10px;
   margin-bottom: 10px;
@@ -143,6 +142,21 @@ input.erro {
   border: 2px solid var(--danger);
   background: #2a0f14;
 }
+
+/*BOTAO SALVAR E GERAR*/
+.container-botoes {
+    display: flex; /* Ativa o modo flexbox */
+    gap: 10px; /* Adiciona espaço entre os botões */
+    justify-content: center; /* Centraliza (opcional) */
+}
+
+/*BOTAO ADICIONAR PARADA E SALVAR ROTA*/
+.container-botoes2 {
+    display: flex; /* Ativa o modo flexbox */
+    gap: 10px; /* Adiciona espaço entre os botões */
+    justify-content: center; /* Centraliza (opcional) */
+}
+
   </style>
 </head>
 
@@ -178,25 +192,33 @@ input.erro {
     <button class="btn primary" onclick="gerarCampos()">
       ➕ Gerar destinos
     </button>
-
+    
     <div id="enderecos"></div>
 
-    <button class="btn ghost" onclick="salvarClientes()">
+   <div class="container-botoes">
+     <button class="btn ghost" onclick="salvarClientes()">
       💾 Salvar endereços / clientes
     </button>
+    
+    <button class="btn success" onclick="calcularRota()">
+      🚀 Calcular rota otimizada
+    </button>
+   </div>
+
+   
+    
   </section>
 
   <!-- ROTA -->
   <section class="card destaque">
-    <button class="btn success" onclick="calcularRota()">
-      🚀 Calcular rota otimizada
-    </button>
+    
 
     <hr>
 
-    <h4>Adicionar parada durante a rota</h4>
+    <h4 style="text-align: center;">Adicionar parada durante a rota</h4>
     <input type="text" id="novaParada" placeholder="Digite o endereço da nova parada">
 
+    <div class="container-botoes2">
     <button class="btn secondary" onclick="adicionarParada()">
       ➕ Adicionar parada
     </button>
@@ -204,6 +226,8 @@ input.erro {
     <button class="btn star" onclick="salvarRota()">
       ⭐ Salvar esta rota
     </button>
+    </div>
+    
   </section>
 
   <!-- RESULTADO -->
