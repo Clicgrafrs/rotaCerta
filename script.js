@@ -73,11 +73,15 @@ function mesmoLocal(a, b) {
 }
 
 /* =========================
-   GEO + AUTOCOMPLETE
+   GEO + AUTOCOMPLETE (AJUSTADO)
 ========================= */
 async function geocodificar(txt) {
   const texto = txt.trim();
-  if (texto.length < 4) throw new Error("Endereço muito curto");
+
+  // ✅ validação mínima (UX amigável)
+  if (texto.length < 2) {
+    throw new Error("Digite ao menos parte do endereço");
+  }
 
   const r = await fetch(
     `https://nominatim.openstreetmap.org/search?` +
@@ -85,18 +89,31 @@ async function geocodificar(txt) {
   );
 
   const d = await r.json();
-  if (!d.length) throw new Error("Endereço não encontrado");
+
+  if (!d.length) {
+    throw new Error(
+      "Endereço não encontrado.\n" +
+      "Dica: inclua cidade ou estado."
+    );
+  }
 
   const res = d.find(i =>
     i.lat &&
     i.lon &&
-    (i.address?.city ||
-     i.address?.town ||
-     i.address?.village ||
-     i.address?.municipality)
+    (
+      i.address?.city ||
+      i.address?.town ||
+      i.address?.village ||
+      i.address?.municipality
+    )
   );
 
-  if (!res) throw new Error("Endereço impreciso");
+  if (!res) {
+    throw new Error(
+      "Endereço impreciso.\n" +
+      "Exemplo: Centro Osório RS"
+    );
+  }
 
   return {
     texto,
@@ -117,7 +134,7 @@ async function buscarSugestoesEndereco(txt) {
 }
 
 /* =========================
-   SALVAR CLIENTES (CORRIGIDO)
+   SALVAR CLIENTES
 ========================= */
 async function salvarClientes() {
   const clientes = getClientes();
