@@ -5,88 +5,230 @@
   <title>Rota Fácil PRO</title>
 
   <style>
-    body {
-      font-family: Arial;
-      max-width: 760px;
-      margin: auto;
-      padding: 20px;
-      background: #f4f4f4;
-    }
+    :root {
+  --bg: #0f172a;
+  --card: #111827;
+  --input: #1f2933;
+  --primary: #3b82f6;
+  --secondary: #0ea5e9;
+  --success: #22c55e;
+  --danger: #ef4444;
+  --text: #e5e7eb;
+  --muted: #9ca3af;
+}
 
-    h2 { text-align: center; }
+* {
+  box-sizing: border-box;
+}
 
-    input, button, select {
-      width: 100%;
-      margin: 6px 0;
-      padding: 10px;
-      font-size: 15px;
-    }
+body {
+  margin: 0;
+  background: linear-gradient(180deg, #020617, #0f172a);
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  color: var(--text);
+}
 
-    button { cursor: pointer; }
+.app {
+  max-width: 430px;
+  margin: auto;
+  padding: 16px;
+}
 
-    .box {
-      background: #fff;
-      padding: 15px;
-      margin-bottom: 15px;
-      border-radius: 6px;
-    }
+/* HEADER */
+.app-header {
+  text-align: center;
+  margin-bottom: 20px;
+}
 
-    .destino {
-      border-bottom: 1px solid #ddd;
-      padding-bottom: 10px;
-      margin-bottom: 10px;
-    }
+.app-header h1 {
+  margin: 0;
+  font-size: 1.6rem;
+}
 
-    input.erro {
-  border: 2px solid red;
-  background-color: #fff5f5;
+.version {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+/* CARDS */
+.card {
+  background: var(--card);
+  border-radius: 14px;
+  padding: 16px;
+  margin-bottom: 16px;
+  box-shadow: 0 10px 25px rgba(0,0,0,.35);
+}
+
+.card h3, .card h4 {
+  margin-top: 0;
+}
+
+/* INPUTS */
+input, select {
+  width: 100%;
+  padding: 12px;
+  margin: 8px 0;
+  background: var(--input);
+  border: 1px solid #334155;
+  border-radius: 10px;
+  color: var(--text);
+  font-size: 15px;
+}
+
+input::placeholder {
+  color: var(--muted);
+}
+
+/* BOTÕES */
+.btn {
+  width: 100%;
+  padding: 13px;
+  border: none;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 600;
+  margin-top: 8px;
+  cursor: pointer;
+}
+
+.btn.primary { background: var(--primary); color: #fff; }
+.btn.secondary { background: var(--secondary); color: #fff; }
+.btn.success { background: var(--success); color: #022c22; }
+.btn.danger { background: var(--danger); color: #fff; }
+.btn.star { background: #facc15; color: #422006; }
+.btn.ghost {
+  background: transparent;
+  border: 1px dashed #334155;
+  color: var(--muted);
+}
+
+.btn:active {
+  transform: scale(.98);
+}
+
+/* DESTAQUE */
+.card.destaque {
+  border: 1px solid var(--primary);
+}
+
+/* DESTINOS */
+.destino {
+  background: #020617;
+  padding: 12px;
+  border-radius: 10px;
+  margin-bottom: 10px;
+}
+
+/* RESULTADO */
+.resultado li a {
+  color: #60a5fa;
+  text-decoration: none;
+  font-weight: bold;
+}
+
+/* LINHA */
+.row {
+  display: flex;
+  gap: 10px;
+}
+
+/* INFO */
+.info {
+  color: var(--success);
+  font-size: 0.85rem;
+}
+
+/* ERRO */
+input.erro {
+  border: 2px solid var(--danger);
+  background: #2a0f14;
 }
   </style>
 </head>
 
 <body>
 
-<h2>🚗 Rota Fácil PRO 1.3.0</h2>
+<div class="app">
 
-<div class="box">
-  <strong>Ponto de partida</strong>
-  <input type="text" id="origem" placeholder="Digite o ponto de partida">
-  <button onclick="usarLocalizacao()">📍 Usar minha localização</button>
-  <small id="infoLocalizacao"></small>
-</div>
+  <header class="app-header">
+    <h1>🚗 Rota Fácil PRO</h1>
+    <span class="version">v1.3.0</span>
+  </header>
 
-<div class="box">
-  <strong>Quantas paradas?</strong>
-  <input type="number" id="qtd" min="1" max="10" value="2">
-  <button onclick="gerarCampos()">Gerar destinos</button>
-  <div id="enderecos"></div>
-  <button onclick="salvarClientes()">💾 Salvar endereços/clientes</button>
-</div>
+  <!-- ORIGEM -->
+  <section class="card">
+    <h3>Ponto de partida</h3>
 
-<div class="box">
-  <button onclick="calcularRota()">Calcular rota otimizada</button>
+    <input type="text" id="origem" placeholder="Digite o ponto de partida">
+    
+    <button class="btn secondary" onclick="usarLocalizacao()">
+      📍 Usar minha localização
+    </button>
 
-  <strong>Adicionar nova parada durante a rota</strong>
-  <input type="text" id="novaParada" placeholder="Digite o endereço da nova parada">
-  <button onclick="adicionarParada()">➕ Adicionar parada</button>
+    <small id="infoLocalizacao" class="info"></small>
+  </section>
 
-  <button onclick="salvarRota()">⭐ Salvar esta rota</button>
-</div>
+  <!-- DESTINOS -->
+  <section class="card">
+    <h3>Paradas</h3>
 
-<div class="box">
-  <h3>Roteiro</h3>
-  <ol id="resultado"></ol>
-</div>
+    <label>Quantas paradas?</label>
+    <input type="number" id="qtd" min="1" max="10" value="2">
 
-<div class="box">
-  <h3>📂 Rotas salvas</h3>
-  <select id="rotasSelect">
-    <option value="">Selecione uma rota salva</option>
-  </select>
-  <button onclick="abrirRotaSelecionada()">🚗 Abrir rota</button>
-  <button onclick="excluirRotaSelecionada()">🗑️ Excluir rota</button>
+    <button class="btn primary" onclick="gerarCampos()">
+      ➕ Gerar destinos
+    </button>
+
+    <div id="enderecos"></div>
+
+    <button class="btn ghost" onclick="salvarClientes()">
+      💾 Salvar endereços / clientes
+    </button>
+  </section>
+
+  <!-- ROTA -->
+  <section class="card destaque">
+    <button class="btn success" onclick="calcularRota()">
+      🚀 Calcular rota otimizada
+    </button>
+
+    <hr>
+
+    <h4>Adicionar parada durante a rota</h4>
+    <input type="text" id="novaParada" placeholder="Digite o endereço da nova parada">
+
+    <button class="btn secondary" onclick="adicionarParada()">
+      ➕ Adicionar parada
+    </button>
+
+    <button class="btn star" onclick="salvarRota()">
+      ⭐ Salvar esta rota
+    </button>
+  </section>
+
+  <!-- RESULTADO -->
+  <section class="card">
+    <h3>📍 Roteiro</h3>
+    <ol id="resultado" class="resultado"></ol>
+  </section>
+
+  <!-- ROTAS SALVAS -->
+  <section class="card">
+    <h3>📂 Rotas salvas</h3>
+
+    <select id="rotasSelect">
+      <option value="">Selecione uma rota salva</option>
+    </select>
+
+    <div class="row">
+      <button class="btn primary" onclick="abrirRotaSelecionada()">🚗 Abrir</button>
+      <button class="btn danger" onclick="excluirRotaSelecionada()">🗑️ Excluir</button>
+    </div>
+  </section>
+
 </div>
 
 <script src="script.js"></script>
 </body>
+  
 </html>
