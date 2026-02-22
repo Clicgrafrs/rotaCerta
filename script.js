@@ -49,6 +49,10 @@ function getClientes() {
   return JSON.parse(localStorage.getItem("clientes") || "[]");
 }
 
+function salvarClientesStorage(clientes) {
+  localStorage.setItem("clientes", JSON.stringify(clientes));
+}
+
 /* =========================
    NORMALIZAÇÃO
 ========================= */
@@ -73,46 +77,26 @@ function mesmoLocal(a, b) {
 }
 
 /* =========================
-   GEO + AUTOCOMPLETE (AJUSTADO)
+   GEO + AUTOCOMPLETE
 ========================= */
 async function geocodificar(txt) {
   const texto = txt.trim();
-
-  // ✅ validação mínima (UX amigável)
   if (texto.length < 2) {
     throw new Error("Digite ao menos parte do endereço");
   }
 
   const r = await fetch(
-    `https://nominatim.openstreetmap.org/search?` +
-    `format=json&addressdetails=1&limit=5&countrycodes=br&q=${encodeURIComponent(texto)}`
+    `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=5&countrycodes=br&q=${encodeURIComponent(texto)}`
   );
 
   const d = await r.json();
-
   if (!d.length) {
-    throw new Error(
-      "Endereço não encontrado.\n" +
-      "Dica: inclua cidade ou estado."
-    );
+    throw new Error("Endereço não encontrado. Inclua cidade ou estado.");
   }
 
-  const res = d.find(i =>
-    i.lat &&
-    i.lon &&
-    (
-      i.address?.city ||
-      i.address?.town ||
-      i.address?.village ||
-      i.address?.municipality
-    )
-  );
-
+  const res = d.find(i => i.lat && i.lon);
   if (!res) {
-    throw new Error(
-      "Endereço impreciso.\n" +
-      "Exemplo: Centro Osório RS"
-    );
+    throw new Error("Endereço impreciso.");
   }
 
   return {
@@ -124,12 +108,9 @@ async function geocodificar(txt) {
 
 async function buscarSugestoesEndereco(txt) {
   if (txt.length < 3) return [];
-
   const r = await fetch(
-    `https://nominatim.openstreetmap.org/search?` +
-    `format=json&limit=5&countrycodes=br&q=${encodeURIComponent(txt)}`
+    `https://nominatim.openstreetmap.org/search?format=json&limit=5&countrycodes=br&q=${encodeURIComponent(txt)}`
   );
-
   return await r.json();
 }
 
@@ -139,38 +120,20 @@ async function buscarSugestoesEndereco(txt) {
 async function salvarClientes() {
   const clientes = getClientes();
   let salvos = 0;
-  let ignorados = 0;
 
   for (let d of document.querySelectorAll(".destino")) {
-    const nomeInput = d.querySelector(".nome");
-    const enderecoInput = d.querySelector(".endereco");
-
-    const nome = nomeInput.value.trim();
-    const enderecoTxt = enderecoInput.value.trim();
+    const nome = d.querySelector(".nome").value.trim();
+    const enderecoTxt = d.querySelector(".endereco").value.trim();
     if (!enderecoTxt) continue;
 
     let geo;
     try {
       geo = await geocodificar(enderecoTxt);
     } catch {
-      ignorados++;
       continue;
     }
 
-    const nomeNorm = normalizarTexto(nome);
-
-    if (
-      nomeNorm &&
-      clientes.some(c => normalizarTexto(c.nome || "") === nomeNorm)
-    ) {
-      ignorados++;
-      continue;
-    }
-
-    if (clientes.some(c => mesmoLocal(c, geo))) {
-      ignorados++;
-      continue;
-    }
+    if (clientes.some(c => mesmoLocal(c, geo))) continue;
 
     clientes.push({
       nome,
@@ -182,13 +145,22 @@ async function salvarClientes() {
     salvos++;
   }
 
-  localStorage.setItem("clientes", JSON.stringify(clientes));
+  salvarClientesStorage(clientes);
+  alert(`✅ ${salvos} cliente(s) salvos com sucesso`);
+}
 
-  alert(
-    `Salvamento concluído:\n` +
-    `✅ Novos: ${salvos}\n` +
+/* =========================
+   EXCLUIR CLIENTE
+========================= */
+function excluirCliente(index) {
+  const clientes = getClientes();
+  if (!clientes[index]) return;
 
-  );
+  if (!confirm("Deseja excluir este cliente?")) return;
+
+  clientes.splice(index, 1);
+  salvarClientesStorage(clientes);
+  gerarCampos();
 }
 
 /* =========================
@@ -207,29 +179,15 @@ function gerarCampos() {
 
     const sel = document.createElement("select");
     sel.innerHTML = `<option value="">Cliente salvo</option>`;
-    clientes.forEach(c =>
-      sel.innerHTML += `<option value="${c.endereco}|${c.nome || ""}">
+    clientes.forEach((c, idx) => {
+      sel.innerHTML += `<option value="${idx}">
         ${c.nome || c.endereco}
-      </option>`
-    );
+      </option>`;
+    });
 
     const end = document.createElement("input");
     end.className = "endereco";
     end.placeholder = "Endereço *";
-
-    const lista = document.createElement("datalist");
-    lista.id = `lista-${i}`;
-    end.setAttribute("list", lista.id);
-
-    end.addEventListener("input", async () => {
-      lista.innerHTML = "";
-      const s = await buscarSugestoesEndereco(end.value);
-      s.forEach(o => {
-        const opt = document.createElement("option");
-        opt.value = o.display_name;
-        lista.appendChild(opt);
-      });
-    });
 
     const nome = document.createElement("input");
     nome.className = "nome";
@@ -237,26 +195,19 @@ function gerarCampos() {
 
     sel.onchange = () => {
       if (!sel.value) return;
-      const [e, n] = sel.value.split("|");
-      end.value = e;
-      nome.value = n;
+      const c = clientes[sel.value];
+      end.value = c.endereco;
+      nome.value = c.nome || "";
     };
 
-    d.append(sel, end, lista, nome);
+    d.append(sel, end, nome);
     div.appendChild(d);
   }
 }
 
 /* =========================
-   ROTA
+   DISTÂNCIA
 ========================= */
-function ordenarPorProximidade(origem, destinos) {
-  return [...destinos].sort((a, b) =>
-    calcularDistancia(origem.lat, origem.lon, a.lat, a.lon) -
-    calcularDistancia(origem.lat, origem.lon, b.lat, b.lon)
-  );
-}
-
 function calcularDistancia(lat1, lon1, lat2, lon2) {
   const R = 6371;
   const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -275,8 +226,9 @@ function calcularDistancia(lat1, lon1, lat2, lon2) {
 async function calcularRota() {
   try {
     if (!origemAtual) {
-      const txt = document.getElementById("origem").value.trim();
-      origemAtual = await geocodificar(txt);
+      origemAtual = await geocodificar(
+        document.getElementById("origem").value.trim()
+      );
     }
 
     destinosGlobais = [];
@@ -284,8 +236,19 @@ async function calcularRota() {
       destinosGlobais.push(await geocodificar(i.value));
     }
 
-    rotaOrdenada = ordenarPorProximidade(origemAtual, destinosGlobais);
+    rotaOrdenada = [...destinosGlobais].sort((a, b) =>
+      calcularDistancia(origemAtual.lat, origemAtual.lon, a.lat, a.lon) -
+      calcularDistancia(origemAtual.lat, origemAtual.lon, b.lat, b.lon)
+    );
+
     gerarLink();
+
+    // 👉 FOCO AUTOMÁTICO NO RESULTADO
+    document.getElementById("resultado").scrollIntoView({
+      behavior: "smooth",
+      block: "center"
+    });
+
   } catch (e) {
     alert(e.message);
   }
@@ -304,11 +267,23 @@ function gerarLink() {
     const o = encodeURIComponent(origemAtual.texto);
     const d = encodeURIComponent(rotaOrdenada.at(-1).texto);
     const w = rotaOrdenada.slice(0, -1).map(r => encodeURIComponent(r.texto)).join("|");
+
     linkAtual =
       `https://www.google.com/maps/dir/?api=1&origin=${o}&destination=${d}` +
       (w ? `&waypoints=${w}` : "");
   }
 
+  localStorage.setItem("ultimaRota", linkAtual);
+
   document.getElementById("resultado").innerHTML =
     `<li><a href="${linkAtual}" target="_blank">🚗 Abrir rota otimizada</a></li>`;
+}
+
+/* =========================
+   ABRIR ÚLTIMA ROTA
+========================= */
+function abrirUltimaRota() {
+  const link = localStorage.getItem("ultimaRota");
+  if (!link) return alert("Nenhuma rota salva");
+  window.open(link, "_blank");
 }
