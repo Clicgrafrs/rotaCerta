@@ -120,15 +120,18 @@ function gerarCampos() {
 async function geocodificar(txt) {
   const texto = txt.trim();
 
-  // 🔎 Validação semântica mínima antes da API
-  if (texto.length < 8 || texto.split(" ").length < 2) {
+  // 1️⃣ Regras mínimas ANTES da API
+  const palavras = texto.split(" ").filter(p => p.length > 2);
+
+  if (texto.length < 10 || palavras.length < 3) {
     throw new Error(
-      "Endereço muito curto ou genérico.\nDigite um local real, por exemplo:\nSupermercado Dalpiaz Osório RS"
+      "Endereço muito curto ou genérico.\nExemplo válido:\nSupermercado Dalpiaz Osório RS"
     );
   }
 
+  // 2️⃣ Chamada à API
   const r = await fetch(
-    `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&q=${encodeURIComponent(texto)}`
+    `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=5&q=${encodeURIComponent(texto)}`
   );
 
   const d = await r.json();
@@ -139,25 +142,27 @@ async function geocodificar(txt) {
 
   const resultado = d[0];
 
-  // 🧠 Filtro de tipo de local aceito
-  const tiposValidos = [
-    "amenity",
-    "shop",
-    "building",
-    "highway",
-    "road",
-    "residential",
-    "commercial",
-    "industrial",
-    "retail"
-  ];
-
+  // 3️⃣ Confiança do resultado
   if (
-    !resultado.class ||
-    !tiposValidos.includes(resultado.class)
+    resultado.importance < 0.3 || // resultado pouco relevante
+    !resultado.display_name ||
+    !resultado.address ||
+    !(
+      resultado.address.city ||
+      resultado.address.town ||
+      resultado.address.village
+    )
   ) {
     throw new Error(
-      "Endereço muito genérico ou inválido.\nInforme um local, rua ou estabelecimento real."
+      "Endereço genérico ou impreciso.\nInclua nome do local + cidade + estado."
+    );
+  }
+
+  // 4️⃣ Rejeitar se o texto não aparece no nome retornado
+  const nomeRetornado = resultado.display_name.toLowerCase();
+  if (!nomeRetornado.includes(palavras[0].toLowerCase())) {
+    throw new Error(
+      "Endereço não corresponde a um local específico.\nDigite o nome completo do local."
     );
   }
 
