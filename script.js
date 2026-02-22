@@ -165,6 +165,56 @@ async function geocodificar(txt) {
   };
 }
 
+
+/* =========================
+   ORDENAR POR PROXIMIDADE
+========================= */
+function ordenarPorProximidade(origem, destinos) {
+  const restantes = [...destinos];
+  const rota = [];
+  let atual = origem;
+
+  while (restantes.length) {
+    let menorDist = Infinity;
+    let indiceMaisProximo = 0;
+
+    restantes.forEach((d, i) => {
+      const dist = calcularDistancia(
+        atual.lat, atual.lon,
+        d.lat, d.lon
+      );
+
+      if (dist < menorDist) {
+        menorDist = dist;
+        indiceMaisProximo = i;
+      }
+    });
+
+    atual = restantes.splice(indiceMaisProximo, 1)[0];
+    rota.push(atual);
+  }
+
+  return rota;
+}
+
+/* =========================
+   DISTÂNCIA HAVERSINE (km)
+========================= */
+function calcularDistancia(lat1, lon1, lat2, lon2) {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1 * Math.PI / 180) *
+    Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon / 2) ** 2;
+
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+
 /* =========================
    CALCULAR ROTA
 ========================= */
