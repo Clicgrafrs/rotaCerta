@@ -33,15 +33,15 @@ function usarLocalizacao() {
     return;
   }
 
-  navigator.geolocation.getCurrentPosition(
+  let watchId = navigator.geolocation.watchPosition(
     pos => {
       const { latitude, longitude, accuracy } = pos.coords;
 
-      if (accuracy > 100) {
-        alert(
-          `📡 Localização imprecisa (${Math.round(accuracy)}m).\n` +
-          `Ative o GPS ou vá para área aberta.`
-        );
+      // Aguarda precisão aceitável
+      if (accuracy > 30) {
+        document.getElementById("infoLocalizacao").innerText =
+          `📡 Ajustando GPS... (${Math.round(accuracy)}m)`;
+        return;
       }
 
       origemAtual = {
@@ -51,12 +51,14 @@ function usarLocalizacao() {
       };
 
       document.getElementById("infoLocalizacao").innerText =
-        `📍 Localização ativa`;
+        `📍 Localização precisa (${Math.round(accuracy)}m)`;
+
+      navigator.geolocation.clearWatch(watchId);
     },
     err => alert("Erro ao obter localização: " + err.message),
     {
       enableHighAccuracy: true,
-      timeout: 15000,
+      timeout: 20000,
       maximumAge: 0
     }
   );
@@ -98,17 +100,44 @@ async function geocodificar(txt) {
 
   const r = await fetch(
     `https://nominatim.openstreetmap.org/search?` +
-    `format=json&addressdetails=1&limit=5&countrycodes=br&q=${encodeURIComponent(texto)}`
+    `format=json&addressdetails=1&limit=6&countrycodes=br&q=${encodeURIComponent(texto)}`
   );
 
   const d = await r.json();
   if (!d.length) {
-    throw new Error("Endereço não encontrado. Inclua cidade ou estado.");
+    throw new Error(
+      "Endereço não encontrado.\n" +
+      "Inclua cidade ou estado."
+    );
   }
 
-  const res = d.find(i => i.lat && i.lon);
-  if (!res) {
-    throw new Error("Endereço impreciso.");
+  // 🎯 Prioridade inteligente
+  const res =
+    // 1️⃣ Endereço completo
+    d.find(i =>
+      i.address?.road &&
+      (i.address?.city || i.address?.town || i.address?.village) &&
+      i.address?.state
+    ) ||
+
+    // 2️⃣ Local conhecido + cidade
+    d.find(i =>
+      i.type === "amenity" &&
+      i.address?.city &&
+      i.address?.state
+    ) ||
+
+    // 3️⃣ Cidade + estado
+    d.find(i =>
+      (i.address?.city || i.address?.town || i.address?.village) &&
+      i.address?.state
+    ) ||
+
+    // 4️⃣ Fallback seguro
+    d[0];
+
+  if (!res?.lat || !res?.lon) {
+    throw new Error("Endereço impreciso");
   }
 
   return {
@@ -312,7 +341,17 @@ async function adicionarDestino() {
     return;
   }
 
+  // 🔧 GARANTE consistência
+  destinosGlobais = [...rotaOrdenada];
+
+  // Evita duplicar o mesmo local
+  if (destinosGlobais.some(d => mesmoLocal(d, novo))) {
+    alert("Este destino já está na rota");
+    return;
+  }
+
   destinosGlobais.push(novo);
+
   rotaOrdenada = otimizarRota(origemAtual, destinosGlobais);
   gerarLink();
 
