@@ -28,18 +28,41 @@ function isIOS() {
    LOCALIZAÇÃO
 ========================= */
 function usarLocalizacao() {
+  if (!navigator.geolocation) {
+    alert("Geolocalização não suportada");
+    return;
+  }
+
   navigator.geolocation.getCurrentPosition(
     pos => {
+      const { latitude, longitude, accuracy } = pos.coords;
+
+      // 🚫 Precisão ruim (ex: acima de 100m)
+      if (accuracy > 100) {
+        alert(
+          "📡 Localização imprecisa (" +
+          Math.round(accuracy) +
+          "m).\nAtive o GPS ou vá para área aberta."
+        );
+      }
+
       origemAtual = {
-        lat: pos.coords.latitude,
-        lon: pos.coords.longitude,
-        texto: `${pos.coords.latitude},${pos.coords.longitude}`
+        lat: latitude,
+        lon: longitude,
+        texto: `${latitude},${longitude}`
       };
+
       document.getElementById("infoLocalizacao").innerText =
-        "📍 Localização ativa";
+        `📍 Localização ativa (${Math.round(accuracy)}m)`;
     },
-    () => alert("Erro ao obter localização"),
-    { enableHighAccuracy: true }
+    err => {
+      alert("Erro ao obter localização: " + err.message);
+    },
+    {
+      enableHighAccuracy: true,
+      timeout: 15000,
+      maximumAge: 0
+    }
   );
 }
 
