@@ -51,7 +51,7 @@ function usarLocalizacao() {
       };
 
       document.getElementById("infoLocalizacao").innerText =
-        `📍 Localização ativa (${Math.round(accuracy)}m)`;
+        `📍 Localização ativa`;
     },
     err => alert("Erro ao obter localização: " + err.message),
     {
