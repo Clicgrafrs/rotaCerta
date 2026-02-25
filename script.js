@@ -147,6 +147,13 @@ async function geocodificar(txt) {
   };
 }
 
+  return {
+    texto,
+    lat: +res.lat,
+    lon: +res.lon
+  };
+}
+
 /* =========================
    SALVAR CLIENTES
 ========================= */
