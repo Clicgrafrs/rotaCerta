@@ -33,35 +33,51 @@ function usarLocalizacao() {
     return;
   }
 
-  let watchId = navigator.geolocation.watchPosition(
+  document.getElementById("infoLocalizacao").innerText =
+    "📡 Obtendo localização...";
+
+  let melhorPosicao = null;
+
+  const watchId = navigator.geolocation.watchPosition(
     pos => {
       const { latitude, longitude, accuracy } = pos.coords;
 
-      // Aguarda precisão aceitável
-      if (accuracy > 30) {
-        document.getElementById("infoLocalizacao").innerText =
-          `📡 Ajustando GPS... (${Math.round(accuracy)}m)`;
-        return;
+      // Guarda a melhor posição encontrada
+      if (!melhorPosicao || accuracy < melhorPosicao.accuracy) {
+        melhorPosicao = { latitude, longitude, accuracy };
       }
 
-      origemAtual = {
-        lat: latitude,
-        lon: longitude,
-        texto: `${latitude},${longitude}`
-      };
-
-      document.getElementById("infoLocalizacao").innerText =
-        `📍 Localização precisa (${Math.round(accuracy)}m)`;
-
-      navigator.geolocation.clearWatch(watchId);
+      // Se atingir precisão ótima
+      if (accuracy <= 30) {
+        finalizar(melhorPosicao);
+      }
     },
-    err => alert("Erro ao obter localização: " + err.message),
+    err => {
+      if (melhorPosicao) {
+        finalizar(melhorPosicao);
+      } else {
+        alert("Erro ao obter localização: " + err.message);
+      }
+    },
     {
       enableHighAccuracy: true,
-      timeout: 20000,
+      timeout: 15000,
       maximumAge: 0
     }
   );
+
+  function finalizar(pos) {
+    origemAtual = {
+      lat: pos.latitude,
+      lon: pos.longitude,
+      texto: `${pos.latitude},${pos.longitude}`
+    };
+
+    document.getElementById("infoLocalizacao").innerText =
+      `📍 Localização definida (${Math.round(pos.accuracy)}m)`;
+
+    navigator.geolocation.clearWatch(watchId);
+  }
 }
 
 /* =========================
@@ -100,30 +116,27 @@ async function geocodificar(txt) {
 
   const r = await fetch(
     `https://nominatim.openstreetmap.org/search?` +
-    `format=json&addressdetails=1&limit=6&countrycodes=br&q=${encodeURIComponent(texto)}`
+    `format=json&addressdetails=1&limit=8&countrycodes=br&q=${encodeURIComponent(texto)}`
   );
 
   const d = await r.json();
   if (!d.length) {
     throw new Error(
-      "Endereço não encontrado.\n" +
-      "Inclua cidade ou estado."
+      "Endereço não encontrado.\nInclua cidade ou estado."
     );
   }
 
-  // 🎯 Prioridade inteligente
   const res =
-    // 1️⃣ Endereço completo
+    // 1️⃣ Endereço bem definido
     d.find(i =>
-      i.address?.road &&
+      (i.address?.road || i.address?.neighbourhood || i.address?.suburb) &&
       (i.address?.city || i.address?.town || i.address?.village) &&
       i.address?.state
     ) ||
 
-    // 2️⃣ Local conhecido + cidade
+    // 2️⃣ Local conhecido
     d.find(i =>
       i.type === "amenity" &&
-      i.address?.city &&
       i.address?.state
     ) ||
 
@@ -133,7 +146,7 @@ async function geocodificar(txt) {
       i.address?.state
     ) ||
 
-    // 4️⃣ Fallback seguro
+    // 4️⃣ Melhor resultado disponível
     d[0];
 
   if (!res?.lat || !res?.lon) {
@@ -141,19 +154,11 @@ async function geocodificar(txt) {
   }
 
   return {
-    texto,
+    texto: res.display_name,
     lat: +res.lat,
     lon: +res.lon
   };
 }
-
-  return {
-    texto,
-    lat: +res.lat,
-    lon: +res.lon
-  };
-}
-
 /* =========================
    SALVAR CLIENTES
 ========================= */
@@ -331,7 +336,7 @@ async function calcularRota() {
    ADICIONAR DESTINO
 ========================= */
 async function adicionarDestino() {
-  if (!rotaOrdenada.length || !origemAtual) {
+  if (!origemAtual || !destinosGlobais.length) {
     alert("Calcule uma rota antes");
     return;
   }
@@ -348,10 +353,7 @@ async function adicionarDestino() {
     return;
   }
 
-  // 🔧 GARANTE consistência
-  destinosGlobais = [...rotaOrdenada];
-
-  // Evita duplicar o mesmo local
+  // Evita duplicados
   if (destinosGlobais.some(d => mesmoLocal(d, novo))) {
     alert("Este destino já está na rota");
     return;
@@ -359,6 +361,7 @@ async function adicionarDestino() {
 
   destinosGlobais.push(novo);
 
+  // 🔁 Recalcula tudo corretamente
   rotaOrdenada = otimizarRota(origemAtual, destinosGlobais);
   gerarLink();
 
