@@ -6,17 +6,6 @@ let rotaOrdenada = [];
 let linkAtual = null;
 
 /* =========================
-   ERRO VISUAL
-========================= */
-function marcarErro(el) {
-  el.classList.add("erro");
-  el.focus();
-}
-function limparErro(el) {
-  el.classList.remove("erro");
-}
-
-/* =========================
    iOS
 ========================= */
 function isIOS() {
@@ -32,31 +21,48 @@ function usarLocalizacao() {
     return;
   }
 
+  let melhor = null;
+  let finalizado = false;
+
+  function finalizar(c) {
+    if (finalizado) return;
+    finalizado = true;
+
+    origemAtual = {
+      lat: c.latitude,
+      lon: c.longitude,
+      texto: `${c.latitude},${c.longitude}`
+    };
+
+    document.getElementById("infoLocalizacao").innerText =
+      `📍 Localização ativa (${Math.round(c.accuracy)}m)`;
+  }
+
   navigator.geolocation.getCurrentPosition(
     pos => {
-      origemAtual = {
-        lat: pos.coords.latitude,
-        lon: pos.coords.longitude,
-        texto: `${pos.coords.latitude},${pos.coords.longitude}`
-      };
-      document.getElementById("infoLocalizacao").innerText =
-        `📍 Localização ativa (${Math.round(pos.coords.accuracy)}m)`;
+      melhor = pos.coords;
+      finalizar(pos.coords);
+    },
+    () => {},
+    { enableHighAccuracy: false, timeout: 5000 }
+  );
+
+  const watch = navigator.geolocation.watchPosition(
+    pos => {
+      if (!melhor || pos.coords.accuracy < melhor.accuracy) {
+        melhor = pos.coords;
+      }
+      if (pos.coords.accuracy <= 40) {
+        finalizar(pos.coords);
+        navigator.geolocation.clearWatch(watch);
+      }
     },
     () => {
-      alert("Não foi possível obter a localização");
+      if (melhor) finalizar(melhor);
+      navigator.geolocation.clearWatch(watch);
     },
-    { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+    { enableHighAccuracy: true, timeout: 10000 }
   );
-}
-
-/* =========================
-   STORAGE CLIENTES
-========================= */
-function getClientes() {
-  return JSON.parse(localStorage.getItem("clientes") || "[]");
-}
-function salvarClientesStorage(clientes) {
-  localStorage.setItem("clientes", JSON.stringify(clientes));
 }
 
 /* =========================
@@ -71,14 +77,14 @@ function mesmoLocal(a, b) {
 }
 
 /* =========================
-   AUTOCOMPLETE ENDEREÇOS
+   AUTOCOMPLETE
 ========================= */
 async function sugerirEndereco(input, datalistId) {
   const q = input.value.trim();
   if (q.length < 3) return;
 
   const r = await fetch(
-    `https://nominatim.openstreetmap.org/search?format=json&limit=5&countrycodes=br&q=${encodeURIComponent(q)}`
+    `https://nominatim.openstreetmap.org/search?format=json&limit=6&countrycodes=br&q=${encodeURIComponent(q)}`
   );
   const d = await r.json();
 
@@ -93,79 +99,25 @@ async function sugerirEndereco(input, datalistId) {
 }
 
 /* =========================
-   GEOCODIFICAR
+   GEOCODIFICAR INTELIGENTE
 ========================= */
 async function geocodificar(txt) {
   const r = await fetch(
-    `https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=br&q=${encodeURIComponent(txt)}`
+    `https://nominatim.openstreetmap.org/search?format=json&limit=8&countrycodes=br&q=${encodeURIComponent(txt)}`
   );
   const d = await r.json();
   if (!d.length) throw new Error("Endereço não encontrado");
 
+  const res =
+    d.find(i => i.type === "amenity" || i.class === "amenity") ||
+    d.find(i => i.address?.city || i.address?.town || i.address?.village) ||
+    d[0];
+
   return {
-    texto: d[0].display_name,
-    lat: +d[0].lat,
-    lon: +d[0].lon
+    texto: res.display_name,
+    lat: +res.lat,
+    lon: +res.lon
   };
-}
-
-/* =========================
-   SALVAR CLIENTES
-========================= */
-async function salvarClientes() {
-  const clientes = getClientes();
-  let salvos = 0;
-
-  for (let d of document.querySelectorAll(".destino")) {
-    const nome = d.querySelector(".nome").value.trim();
-    const endereco = d.querySelector(".endereco").value.trim();
-    if (!endereco) continue;
-
-    try {
-      const geo = await geocodificar(endereco);
-      if (clientes.some(c => mesmoLocal(c, geo))) continue;
-
-      clientes.push({
-        nome,
-        endereco: geo.texto,
-        lat: geo.lat,
-        lon: geo.lon
-      });
-      salvos++;
-    } catch {}
-  }
-
-  salvarClientesStorage(clientes);
-  listarClientesSelect();
-  alert(`✅ ${salvos} cliente(s) salvos`);
-}
-
-/* =========================
-   LISTAR CLIENTES
-========================= */
-function listarClientesSelect() {
-  const sel = document.getElementById("clientesSelect");
-  if (!sel) return;
-
-  sel.innerHTML = `<option value="">Selecione um cliente</option>`;
-  getClientes().forEach((c, i) => {
-    sel.innerHTML += `<option value="${i}">${c.nome || c.endereco}</option>`;
-  });
-}
-
-/* =========================
-   EXCLUIR CLIENTE
-========================= */
-function excluirClienteSelecionado() {
-  const sel = document.getElementById("clientesSelect");
-  if (sel.value === "") return;
-
-  if (!confirm("Excluir cliente?")) return;
-
-  const clientes = getClientes();
-  clientes.splice(sel.value, 1);
-  salvarClientesStorage(clientes);
-  listarClientesSelect();
 }
 
 /* =========================
@@ -177,49 +129,52 @@ function dist(a, b) {
   const dLon = (b.lon - a.lon) * Math.PI / 180;
   const x =
     Math.sin(dLat/2)**2 +
-    Math.cos(a.lat*Math.PI/180)*Math.cos(b.lat*Math.PI/180)*
+    Math.cos(a.lat*Math.PI/180) *
+    Math.cos(b.lat*Math.PI/180) *
     Math.sin(dLon/2)**2;
   return R * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1-x));
 }
 
 /* =========================
-   CALCULAR ROTA
+   CALCULAR ROTA (NÃO PULA)
 ========================= */
 async function calcularRota() {
   if (!origemAtual) {
-    const origemTxt = document.getElementById("origem").value.trim();
-    if (!origemTxt) {
-      alert("Informe a origem ou use localização");
-      return;
-    }
-    origemAtual = await geocodificar(origemTxt);
+    origemAtual = await geocodificar(
+      document.getElementById("origem").value.trim()
+    );
   }
 
-  destinosGlobais = [];
+  const novos = [];
 
   for (let i of document.querySelectorAll(".endereco")) {
     if (!i.value.trim()) continue;
+
     try {
       const g = await geocodificar(i.value);
-      if (!destinosGlobais.some(d => mesmoLocal(d, g)))
-        destinosGlobais.push(g);
-    } catch {}
+      if (!novos.some(d => mesmoLocal(d, g))) {
+        novos.push(g);
+      }
+    } catch (e) {
+      alert(`Endereço ignorado:\n${i.value}`);
+    }
   }
 
-  if (!destinosGlobais.length) {
+  if (!novos.length) {
     alert("Nenhum destino válido");
     return;
   }
 
+  destinosGlobais = novos;
   otimizarEGerar();
 }
 
 /* =========================
-   ADD PARADA
+   ADD PARADA (CORRIGIDO)
 ========================= */
 async function adicionarDestino() {
-  if (!origemAtual) {
-    alert("Defina a origem primeiro");
+  if (!origemAtual || !destinosGlobais.length) {
+    alert("Calcule uma rota antes");
     return;
   }
 
@@ -233,13 +188,13 @@ async function adicionarDestino() {
     return;
   }
 
-  destinosGlobais.push(novo);
+  destinosGlobais = [...destinosGlobais, novo];
   otimizarEGerar();
   input.value = "";
 }
 
 /* =========================
-   OTIMIZAR + LINK
+   OTIMIZAR
 ========================= */
 function otimizarEGerar() {
   const rota = [];
@@ -267,39 +222,11 @@ function gerarLink() {
     const o = encodeURIComponent(origemAtual.texto);
     const d = encodeURIComponent(rotaOrdenada.at(-1).texto);
     const w = rotaOrdenada.slice(0,-1).map(r => encodeURIComponent(r.texto)).join("|");
-    linkAtual = `https://www.google.com/maps/dir/?api=1&origin=${o}&destination=${d}${w ? `&waypoints=${w}` : ""}`;
+    linkAtual =
+      `https://www.google.com/maps/dir/?api=1&origin=${o}&destination=${d}` +
+      (w ? `&waypoints=${w}` : "");
   }
 
   document.getElementById("resultado").innerHTML =
     `<a href="${linkAtual}" target="_blank">🚗 Abrir rota</a>`;
 }
-
-/* =========================
-   ROTAS SALVAS
-========================= */
-function salvarRota() {
-  if (!linkAtual) return;
-
-  const nome = prompt("Nome da rota:");
-  if (!nome) return;
-
-  const rotas = JSON.parse(localStorage.getItem("rotas") || "[]");
-  rotas.push({ nome, link: linkAtual });
-  localStorage.setItem("rotas", JSON.stringify(rotas));
-  listarRotas();
-}
-
-function listarRotas() {
-  const sel = document.getElementById("rotasSelect");
-  sel.innerHTML = `<option value="">Selecione uma rota</option>`;
-
-  JSON.parse(localStorage.getItem("rotas") || []).forEach((r,i) => {
-    sel.innerHTML += `<option value="${i}">${r.nome}</option>`;
-  });
-}
-
-function abrirRotaSelecionada() {
-  const sel = document.getElementById("rotasSelect");
-  if (sel.value === "") return;
-
-  const r = JSON.parse(localStorage.getItem("rot
