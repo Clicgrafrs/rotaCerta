@@ -239,26 +239,76 @@ function calcularDistancia(lat1, lon1, lat2, lon2) {
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
+
+/* =========================
+   OTIMIZAR ROTA (VIZINHO MAIS PRÓXIMO)
+========================= */
+function otimizarRota(origem, destinos) {
+  const rotaFinal = [];
+  let pontoAtual = origem;
+
+  // copia para não alterar o array original
+  const destinosRestantes = [...destinos];
+
+  while (destinosRestantes.length > 0) {
+    let indiceMaisProximo = 0;
+    let menorDistancia = Infinity;
+
+    for (let i = 0; i < destinosRestantes.length; i++) {
+      const d = destinosRestantes[i];
+      const distancia = calcularDistancia(
+        pontoAtual.lat,
+        pontoAtual.lon,
+        d.lat,
+        d.lon
+      );
+
+      if (distancia < menorDistancia) {
+        menorDistancia = distancia;
+        indiceMaisProximo = i;
+      }
+    }
+
+    const proximoDestino = destinosRestantes.splice(indiceMaisProximo, 1)[0];
+    rotaFinal.push(proximoDestino);
+    pontoAtual = proximoDestino;
+  }
+
+  return rotaFinal;
+}
+
+
 /* =========================
    CALCULAR ROTA
 ========================= */
 async function calcularRota() {
   try {
+    // Sempre recalcula tudo do zero
+    destinosGlobais = [];
+    rotaOrdenada = [];
+
+    // Origem
     if (!origemAtual) {
       origemAtual = await geocodificar(
         document.getElementById("origem").value.trim()
       );
     }
 
-    destinosGlobais = [];
-    for (let i of document.querySelectorAll(".endereco")) {
-      destinosGlobais.push(await geocodificar(i.value));
+    // Destinos
+    for (let input of document.querySelectorAll(".endereco")) {
+      const valor = input.value.trim();
+      if (!valor) continue;
+
+      destinosGlobais.push(await geocodificar(valor));
     }
 
-    rotaOrdenada = [...destinosGlobais].sort((a, b) =>
-      calcularDistancia(origemAtual.lat, origemAtual.lon, a.lat, a.lon) -
-      calcularDistancia(origemAtual.lat, origemAtual.lon, b.lat, b.lon)
-    );
+    if (!destinosGlobais.length) {
+      alert("Adicione ao menos um destino");
+      return;
+    }
+
+    // 🔥 OTIMIZAÇÃO REAL DA ROTA
+    rotaOrdenada = otimizarRota(origemAtual, destinosGlobais);
 
     gerarLink();
 
@@ -271,6 +321,8 @@ async function calcularRota() {
     alert(e.message);
   }
 }
+
+
 
 /* =========================
    GERAR LINK
