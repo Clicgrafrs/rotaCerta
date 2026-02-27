@@ -288,8 +288,8 @@ function otimizarEGerar() {
     state.rotaOrdenada.push(atual);
   }
 
-  gerarLink();
   renderRoteiro();
+  gerarLink();
 }
 
 /* ======================================================
@@ -309,38 +309,43 @@ function renderRoteiro() {
 /* ======================================================
    GERAR LINK
 ====================================================== */
+
 function gerarLink() {
   const pontos = [
     state.origem,
     ...state.rotaOrdenada
   ];
 
-  // Monta coordenadas (mais confiável que texto)
   const coords = pontos.map(p => `${p.lat},${p.lon}`);
 
-  // LINK UNIVERSAL (mobile)
   const geoLink = `geo:${coords[0]}?q=${coords.join("|")}`;
-
-  // FALLBACK WEB (desktop / sem handler)
-  const webLink =
-    `https://www.google.com/maps/dir/${coords.join("/")}`;
+  const webLink = `https://www.google.com/maps/dir/${coords.join("/")}`;
 
   state.linkAtual = {
     geo: geoLink,
     web: webLink
   };
 
-  // Render
   const ol = document.getElementById("resultado");
-  ol.innerHTML = `
-    <li>
-      <a href="${geoLink}">📱 Abrir no app de navegação</a>
-    </li>
-    <li>
-      <a href="${webLink}" target="_blank">🌍 Abrir no navegador</a>
-    </li>
+
+  // 🔹 Remove link antigo, se existir
+  const antigo = document.getElementById("linkRota");
+  if (antigo) antigo.remove();
+
+  // 🔹 Cria item do link
+  const li = document.createElement("li");
+  li.id = "linkRota";
+  li.innerHTML = `
+    <a href="${geoLink}">📱 Abrir no app de navegação</a>
+    &nbsp;|&nbsp;
+    <a href="${webLink}" target="_blank">🌍 Abrir no navegador</a>
   `;
+
+  ol.appendChild(li);
 }
+
+
+
 /* ======================================================
    ROTAS SALVAS
 ====================================================== */
