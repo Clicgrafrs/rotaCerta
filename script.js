@@ -33,51 +33,70 @@ function usarLocalizacao() {
     return;
   }
 
-  document.getElementById("infoLocalizacao").innerText =
-    "📡 Obtendo localização...";
+  const info = document.getElementById("infoLocalizacao");
+  info.innerText = "📡 Obtendo localização...";
 
-  let melhorPosicao = null;
-
-  const watchId = navigator.geolocation.watchPosition(
-    pos => {
-      const { latitude, longitude, accuracy } = pos.coords;
-
-      // Guarda a melhor posição encontrada
-      if (!melhorPosicao || accuracy < melhorPosicao.accuracy) {
-        melhorPosicao = { latitude, longitude, accuracy };
-      }
-
-      // Se atingir precisão ótima
-      if (accuracy <= 30) {
-        finalizar(melhorPosicao);
-      }
-    },
-    err => {
-      if (melhorPosicao) {
-        finalizar(melhorPosicao);
-      } else {
-        alert("Erro ao obter localização: " + err.message);
-      }
-    },
-    {
-      enableHighAccuracy: true,
-      timeout: 15000,
-      maximumAge: 0
-    }
-  );
+  let melhor = null;
+  let finalizado = false;
 
   function finalizar(pos) {
+    if (finalizado) return;
+    finalizado = true;
+
     origemAtual = {
       lat: pos.latitude,
       lon: pos.longitude,
       texto: `${pos.latitude},${pos.longitude}`
     };
 
-    document.getElementById("infoLocalizacao").innerText =
+    info.innerText =
       `📍 Localização definida (${Math.round(pos.accuracy)}m)`;
-
-    navigator.geolocation.clearWatch(watchId);
   }
+
+  // 1️⃣ Tentativa rápida
+  navigator.geolocation.getCurrentPosition(
+    pos => {
+      melhor = pos.coords;
+      finalizar(pos.coords);
+    },
+    () => {},
+    {
+      enableHighAccuracy: false,
+      timeout: 5000,
+      maximumAge: 60000
+    }
+  );
+
+  // 2️⃣ Refinamento por GPS
+  const watchId = navigator.geolocation.watchPosition(
+    pos => {
+      if (!melhor || pos.coords.accuracy < melhor.accuracy) {
+        melhor = pos.coords;
+      }
+
+      if (pos.coords.accuracy <= 40) {
+        finalizar(pos.coords);
+        navigator.geolocation.clearWatch(watchId);
+      }
+    },
+    () => {
+      if (melhor) finalizar(melhor);
+      navigator.geolocation.clearWatch(watchId);
+    },
+    {
+      enableHighAccuracy: true,
+      timeout: 10000,
+      maximumAge: 0
+    }
+  );
+
+  // 3️⃣ Fallback final (não trava o usuário)
+  setTimeout(() => {
+    if (!finalizado && melhor) {
+      finalizar(melhor);
+      navigator.geolocation.clearWatch(watchId);
+    }
+  }, 6000);
 }
 
 /* =========================
