@@ -333,10 +333,8 @@ function gerarLink() {
       (w ? `&waypoints=${w}` : "");
   }
 
-  document.getElementById("resultado").insertAdjacentHTML(
-    "beforeend",
-    `<li><a href="${state.linkAtual}" target="_blank">🚗 Abrir rota no Maps</a></li>`
-  );
+  document.getElementById("resultado").innerHTML =
+  `<li><a href="${linkAtual}" target="_blank">🚗 Abrir rota</a></li>`;
 }
 
 /* ======================================================
