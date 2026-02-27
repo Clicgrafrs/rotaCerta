@@ -310,23 +310,37 @@ function renderRoteiro() {
    GERAR LINK
 ====================================================== */
 function gerarLink() {
-  if (isIOS()) {
-    const p = [state.origem.texto, ...state.rotaOrdenada.map(r => r.texto)].join("+to:");
-    state.linkAtual = `https://maps.apple.com/?daddr=${encodeURIComponent(p)}`;
-  } else {
-    const o = encodeURIComponent(state.origem.texto);
-    const d = encodeURIComponent(state.rotaOrdenada.at(-1).texto);
-    const w = state.rotaOrdenada.slice(0, -1).map(r => encodeURIComponent(r.texto)).join("|");
+  const pontos = [
+    state.origem,
+    ...state.rotaOrdenada
+  ];
 
-    state.linkAtual =
-      `https://www.google.com/maps/dir/?api=1&origin=${o}&destination=${d}` +
-      (w ? `&waypoints=${w}` : "");
-  }
+  // Monta coordenadas (mais confiável que texto)
+  const coords = pontos.map(p => `${p.lat},${p.lon}`);
 
-  document.getElementById("resultado").innerHTML =
-  `<li><a href="${state.linkAtual}" target="_blank">🚗 Abrir rota</a></li>`;
+  // LINK UNIVERSAL (mobile)
+  const geoLink = `geo:${coords[0]}?q=${coords.join("|")}`;
+
+  // FALLBACK WEB (desktop / sem handler)
+  const webLink =
+    `https://www.google.com/maps/dir/${coords.join("/")}`;
+
+  state.linkAtual = {
+    geo: geoLink,
+    web: webLink
+  };
+
+  // Render
+  const ol = document.getElementById("resultado");
+  ol.innerHTML = `
+    <li>
+      <a href="${geoLink}">📱 Abrir no app de navegação</a>
+    </li>
+    <li>
+      <a href="${webLink}" target="_blank">🌍 Abrir no navegador</a>
+    </li>
+  `;
 }
-
 /* ======================================================
    ROTAS SALVAS
 ====================================================== */
