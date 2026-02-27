@@ -164,54 +164,27 @@ function excluirClienteSelecionado() {
    GERAR CAMPOS DE DESTINO
 ====================================================== */
 function gerarCampos() {
-
-function gerarCampos() {
   const qtd = +document.getElementById("qtd").value;
   const div = document.getElementById("enderecos");
   div.innerHTML = "";
-
-  const clientes = getClientes();
 
   for (let i = 0; i < qtd; i++) {
     const d = document.createElement("div");
     d.className = "destino";
 
-    /* SELECT CLIENTES SALVOS */
-    const sel = document.createElement("select");
-    sel.innerHTML = `<option value="">Selecionar endereço salvo</option>`;
-
-    clientes.forEach((c, idx) => {
-      sel.innerHTML += `
-        <option value="${idx}">
-          ${c.nome || c.endereco}
-        </option>
-      `;
-    });
-
-    /* INPUT ENDEREÇO */
     const end = document.createElement("input");
     end.className = "endereco";
     end.placeholder = "Endereço *";
 
-    /* INPUT NOME */
     const nome = document.createElement("input");
     nome.className = "nome";
     nome.placeholder = "Nome do cliente (opcional)";
 
-    /* AO SELECIONAR CLIENTE */
-    sel.onchange = () => {
-      if (sel.value === "") return;
-      const c = clientes[sel.value];
-      end.value = c.endereco;
-      nome.value = c.nome || "";
-    };
-
-    d.append(sel, end, nome);
+    d.append(end, nome);
     div.appendChild(d);
   }
 }
 
-   
 /* ======================================================
    DISTÂNCIA
 ====================================================== */
