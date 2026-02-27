@@ -32,47 +32,20 @@ function usarLocalizacao() {
     return;
   }
 
-  let melhor = null;
-  let finalizado = false;
-
-  function finalizar(c) {
-    if (finalizado) return;
-    finalizado = true;
-
-    origemAtual = {
-      lat: c.latitude,
-      lon: c.longitude,
-      texto: `${c.latitude},${c.longitude}`
-    };
-
-    document.getElementById("infoLocalizacao").innerText =
-      `📍 Localização ativa (${Math.round(c.accuracy)}m)`;
-  }
-
   navigator.geolocation.getCurrentPosition(
     pos => {
-      melhor = pos.coords;
-      finalizar(pos.coords);
+      origemAtual = {
+        lat: pos.coords.latitude,
+        lon: pos.coords.longitude,
+        texto: `${pos.coords.latitude},${pos.coords.longitude}`
+      };
+      document.getElementById("infoLocalizacao").innerText =
+        `📍 Localização ativa (${Math.round(pos.coords.accuracy)}m)`;
     },
-    () => {},
-    { enableHighAccuracy: false, timeout: 5000 }
-  );
-
-  const watch = navigator.geolocation.watchPosition(
-    pos => {
-      if (!melhor || pos.coords.accuracy < melhor.accuracy) {
-        melhor = pos.coords;
-      }
-      if (pos.coords.accuracy <= 40) {
-        finalizar(pos.coords);
-        navigator.geolocation.clearWatch(watch);
-      }
+    err => {
+      alert("Não foi possível obter a localização");
     },
-    () => {
-      if (melhor) finalizar(melhor);
-      navigator.geolocation.clearWatch(watch);
-    },
-    { enableHighAccuracy: true, timeout: 10000 }
+    { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
   );
 }
 
@@ -214,9 +187,12 @@ function dist(a, b) {
 ========================= */
 async function calcularRota() {
   if (!origemAtual) {
-    origemAtual = await geocodificar(
-      document.getElementById("origem").value.trim()
-    );
+    const origemTxt = document.getElementById("origem").value.trim();
+    if (!origemTxt) {
+      alert("Informe a origem ou use localização");
+      return;
+    }
+    origemAtual = await geocodificar(origemTxt);
   }
 
   destinosGlobais = [];
@@ -239,7 +215,7 @@ async function calcularRota() {
 }
 
 /* =========================
-   ADD PARADA (FIX)
+   ADD PARADA
 ========================= */
 async function adicionarDestino() {
   if (!origemAtual) {
@@ -319,19 +295,3 @@ function listarRotas() {
 
   JSON.parse(localStorage.getItem("rotas") || []).forEach((r,i) => {
     sel.innerHTML += `<option value="${i}">${r.nome}</option>`;
-  });
-}
-
-function abrirRotaSelecionada() {
-  const sel = document.getElementById("rotasSelect");
-  if (sel.value === "") return;
-
-  const r = JSON.parse(localStorage.getItem("rotas"))[sel.value];
-  window.open(r.link, "_blank");
-}
-
-/* =========================
-   INIT
-========================= */
-listarClientesSelect();
-listarRotas();
