@@ -283,22 +283,17 @@ function otimizarRota(origem, destinos) {
 ========================= */
 async function calcularRota() {
   try {
-    // Sempre recalcula tudo do zero
     destinosGlobais = [];
     rotaOrdenada = [];
 
-    // Origem
-    if (!origemAtual) {
-      origemAtual = await geocodificar(
-        document.getElementById("origem").value.trim()
-      );
-    }
+    // 🔥 sempre recalcula a origem
+    origemAtual = await geocodificar(
+      document.getElementById("origem").value.trim()
+    );
 
-    // Destinos
     for (let input of document.querySelectorAll(".endereco")) {
       const valor = input.value.trim();
       if (!valor) continue;
-
       destinosGlobais.push(await geocodificar(valor));
     }
 
@@ -307,9 +302,13 @@ async function calcularRota() {
       return;
     }
 
-    // 🔥 OTIMIZAÇÃO REAL DA ROTA
-    rotaOrdenada = otimizarRota(origemAtual, destinosGlobais);
+    // 🔒 remove duplicados
+    destinosGlobais = destinosGlobais.filter(
+      (d, i, arr) =>
+        i === arr.findIndex(o => mesmoLocal(o, d))
+    );
 
+    rotaOrdenada = otimizarRota(origemAtual, destinosGlobais);
     gerarLink();
 
     document.getElementById("resultado").scrollIntoView({
@@ -321,7 +320,6 @@ async function calcularRota() {
     alert(e.message);
   }
 }
-
 
 
 /* =========================
