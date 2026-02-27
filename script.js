@@ -12,7 +12,6 @@ function marcarErro(el) {
   el.classList.add("erro");
   el.focus();
 }
-
 function limparErro(el) {
   el.classList.remove("erro");
 }
@@ -49,7 +48,8 @@ function usarLocalizacao() {
       texto: `${pos.latitude},${pos.longitude}`
     };
 
-    info.innerText = `📍 Localização definida (${Math.round(pos.accuracy)}m)`;
+    info.innerText =
+      `📍 Localização definida (${Math.round(pos.accuracy)}m)`;
   }
 
   navigator.geolocation.getCurrentPosition(
@@ -92,7 +92,6 @@ function usarLocalizacao() {
 function getClientes() {
   return JSON.parse(localStorage.getItem("clientes") || "[]");
 }
-
 function salvarClientesStorage(clientes) {
   localStorage.setItem("clientes", JSON.stringify(clientes));
 }
@@ -103,7 +102,6 @@ function salvarClientesStorage(clientes) {
 function normalizarCoordenada(v, casas = 5) {
   return Number(v).toFixed(casas);
 }
-
 function mesmoLocal(a, b) {
   return (
     normalizarCoordenada(a.lat) === normalizarCoordenada(b.lat) &&
@@ -116,35 +114,17 @@ function mesmoLocal(a, b) {
 ========================= */
 async function geocodificar(txt) {
   const texto = txt.trim();
-  if (texto.length < 2) {
-    throw new Error("Digite ao menos parte do endereço");
-  }
+  if (texto.length < 2) throw new Error("Digite ao menos parte do endereço");
 
   const r = await fetch(
     `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=8&countrycodes=br&q=${encodeURIComponent(texto)}`
   );
 
   const d = await r.json();
-  if (!d.length) {
-    throw new Error("Endereço não encontrado.\nInclua cidade ou estado.");
-  }
+  if (!d.length) throw new Error("Endereço não encontrado");
 
-  const res =
-    d.find(i =>
-      (i.address?.road || i.address?.neighbourhood || i.address?.suburb) &&
-      (i.address?.city || i.address?.town || i.address?.village) &&
-      i.address?.state
-    ) ||
-    d.find(i => i.type === "amenity" && i.address?.state) ||
-    d.find(i =>
-      (i.address?.city || i.address?.town || i.address?.village) &&
-      i.address?.state
-    ) ||
-    d[0];
-
-  if (!res?.lat || !res?.lon) {
-    throw new Error("Endereço impreciso");
-  }
+  const res = d[0];
+  if (!res.lat || !res.lon) throw new Error("Endereço impreciso");
 
   const enderecoLimpo = [
     res.address?.road,
@@ -155,7 +135,7 @@ async function geocodificar(txt) {
   ].filter(Boolean).join(", ");
 
   return {
-    texto: enderecoLimpo || `${res.lat},${res.lon}`,
+    texto: enderecoLimpo,
     lat: +res.lat,
     lon: +res.lon
   };
@@ -188,13 +168,12 @@ async function salvarClientes() {
       lat: geo.lat,
       lon: geo.lon
     });
-
     salvos++;
   }
 
   salvarClientesStorage(clientes);
   listarClientesSelect();
-  alert(`✅ ${salvos} cliente(s) salvos com sucesso`);
+  alert(`✅ ${salvos} cliente(s) salvos`);
 }
 
 /* =========================
@@ -212,13 +191,22 @@ function listarClientesSelect() {
   });
 }
 
-function excluirCliente(index) {
+/* =========================
+   EXCLUIR CLIENTE
+========================= */
+function excluirClienteSelecionado() {
+  const sel = document.getElementById("clientesSelect");
+  if (!sel || sel.value === "") {
+    alert("Selecione um cliente");
+    return;
+  }
+
   const clientes = getClientes();
-  if (!clientes[index]) return;
+  const idx = Number(sel.value);
 
   if (!confirm("Deseja excluir este cliente?")) return;
 
-  clientes.splice(index, 1);
+  clientes.splice(idx, 1);
   salvarClientesStorage(clientes);
   listarClientesSelect();
 }
@@ -265,7 +253,7 @@ function gerarCampos() {
 }
 
 /* =========================
-   DISTÂNCIA (HAVERSINE)
+   DISTÂNCIA
 ========================= */
 function calcularDistancia(lat1, lon1, lat2, lon2) {
   const R = 6371;
@@ -321,28 +309,23 @@ async function calcularRota() {
 
     destinosGlobais = [];
     for (let i of document.querySelectorAll(".endereco")) {
-      if (!i.value.trim()) throw new Error("Preencha todos os endereços");
       destinosGlobais.push(await geocodificar(i.value));
     }
 
     rotaOrdenada = otimizarRota(origemAtual, destinosGlobais);
     gerarLink();
 
-    document.getElementById("resultado").scrollIntoView({
-      behavior: "smooth",
-      block: "center"
-    });
   } catch (e) {
     alert(e.message);
   }
 }
 
 /* =========================
-   ADICIONAR DESTINO
+   ADICIONAR DESTINO (CORRIGIDO)
 ========================= */
 async function adicionarDestino() {
-  if (!origemAtual || !destinosGlobais.length) {
-    alert("Calcule uma rota antes");
+  if (!origemAtual) {
+    alert("Defina a origem primeiro");
     return;
   }
 
@@ -366,7 +349,6 @@ async function adicionarDestino() {
   destinosGlobais.push(novo);
   rotaOrdenada = otimizarRota(origemAtual, destinosGlobais);
   gerarLink();
-
   input.value = "";
 }
 
@@ -377,19 +359,12 @@ function gerarLink() {
   if (!rotaOrdenada.length) return;
 
   if (isIOS()) {
-    const pontos = [
-      origemAtual.texto,
-      ...rotaOrdenada.map(r => r.texto)
-    ].join("+to:");
-
+    const pontos = [origemAtual.texto, ...rotaOrdenada.map(r => r.texto)].join("+to:");
     linkAtual = `https://maps.apple.com/?daddr=${encodeURIComponent(pontos)}`;
   } else {
     const o = encodeURIComponent(origemAtual.texto);
     const d = encodeURIComponent(rotaOrdenada.at(-1).texto);
-    const w = rotaOrdenada
-      .slice(0, -1)
-      .map(r => encodeURIComponent(r.texto))
-      .join("|");
+    const w = rotaOrdenada.slice(0, -1).map(r => encodeURIComponent(r.texto)).join("|");
 
     linkAtual =
       `https://www.google.com/maps/dir/?api=1&origin=${o}&destination=${d}` +
@@ -404,24 +379,19 @@ function gerarLink() {
 /* =========================
    ROTAS SALVAS
 ========================= */
-function salvarRota(nome = null) {
-  if (!linkAtual || !rotaOrdenada.length) {
-    alert("Nenhuma rota para salvar");
+function salvarRota() {
+  if (!linkAtual) {
+    alert("Calcule uma rota antes");
     return;
   }
 
+  const nome = prompt("Nome da rota:");
+  if (!nome) return;
+
   const rotas = JSON.parse(localStorage.getItem("rotas") || "[]");
-
-  rotas.push({
-    nome: nome || `Rota ${rotas.length + 1}`,
-    link: linkAtual,
-    origem: origemAtual,
-    destinos: rotaOrdenada
-  });
-
+  rotas.push({ nome, link: linkAtual });
   localStorage.setItem("rotas", JSON.stringify(rotas));
   listarRotas();
-  alert("✅ Rota salva com sucesso");
 }
 
 function listarRotas() {
@@ -434,6 +404,8 @@ function listarRotas() {
   rotas.forEach((r, i) => {
     sel.innerHTML += `<option value="${i}">${r.nome}</option>`;
   });
+
+  sel.onchange = abrirRotaSalva;
 }
 
 function abrirRotaSalva() {
@@ -445,12 +417,6 @@ function abrirRotaSalva() {
   if (!rota) return;
 
   window.open(rota.link, "_blank");
-}
-
-function excluirTodasRotas() {
-  if (!confirm("Deseja excluir todas as rotas salvas?")) return;
-  localStorage.removeItem("rotas");
-  listarRotas();
 }
 
 /* =========================
