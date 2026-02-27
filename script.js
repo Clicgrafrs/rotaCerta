@@ -42,7 +42,7 @@ function usarLocalizacao() {
       document.getElementById("infoLocalizacao").innerText =
         `📍 Localização ativa (${Math.round(pos.coords.accuracy)}m)`;
     },
-    err => {
+    () => {
       alert("Não foi possível obter a localização");
     },
     { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
@@ -295,3 +295,11 @@ function listarRotas() {
 
   JSON.parse(localStorage.getItem("rotas") || []).forEach((r,i) => {
     sel.innerHTML += `<option value="${i}">${r.nome}</option>`;
+  });
+}
+
+function abrirRotaSelecionada() {
+  const sel = document.getElementById("rotasSelect");
+  if (sel.value === "") return;
+
+  const r = JSON.parse(localStorage.getItem("rot
