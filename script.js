@@ -172,11 +172,19 @@ async function geocodificar(txt) {
     throw new Error("Endereço impreciso");
   }
 
-  return {
-    texto: res.display_name,
-    lat: +res.lat,
-    lon: +res.lon
-  };
+     const enderecoLimpo = [
+     res.address?.road,
+     res.address?.house_number,
+     res.address?.neighbourhood,
+     res.address?.city || res.address?.town || res.address?.village,
+     res.address?.state
+   ].filter(Boolean).join(", ");
+   
+   return {
+     texto: enderecoLimpo,
+     lat: +res.lat,
+     lon: +res.lon
+   };
 }
 /* =========================
    SALVAR CLIENTES
@@ -412,10 +420,29 @@ function gerarLink() {
       `https://www.google.com/maps/dir/?api=1&origin=${o}&destination=${d}` +
       (w ? `&waypoints=${w}` : "");
   }
-
+   localStorage.setItem("ultimaRota", linkAtual);
   document.getElementById("resultado").innerHTML =
     `<li><a href="${linkAtual}" target="_blank">🚗 Abrir rota otimizada</a></li>`;
 }
+
+
+/* =========================
+   LISTAR ROTAS SALVAS
+========================= */
+function listarRotas() {
+  const sel = document.getElementById("rotasSelect");
+  if (!sel) return;
+
+  const rotas = JSON.parse(localStorage.getItem("rotas") || "[]");
+
+  sel.innerHTML = `<option value="">Selecione uma rota salva</option>`;
+
+  rotas.forEach((r, i) => {
+    sel.innerHTML += `<option value="${i}">${r.nome}</option>`;
+  });
+}
+
+
 
 /* =========================
    INIT
