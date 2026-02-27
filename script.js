@@ -77,6 +77,16 @@ function usarLocalizacao() {
 }
 
 /* =========================
+   STORAGE CLIENTES
+========================= */
+function getClientes() {
+  return JSON.parse(localStorage.getItem("clientes") || "[]");
+}
+function salvarClientesStorage(clientes) {
+  localStorage.setItem("clientes", JSON.stringify(clientes));
+}
+
+/* =========================
    NORMALIZAÇÃO
 ========================= */
 function normalizar(v) {
@@ -88,14 +98,14 @@ function mesmoLocal(a, b) {
 }
 
 /* =========================
-   AUTOCOMPLETE (INTELIGENTE)
+   AUTOCOMPLETE ENDEREÇOS
 ========================= */
 async function sugerirEndereco(input, datalistId) {
   const q = input.value.trim();
   if (q.length < 3) return;
 
   const r = await fetch(
-    `https://nominatim.openstreetmap.org/search?format=json&limit=8&countrycodes=br&q=${encodeURIComponent(q)}`
+    `https://nominatim.openstreetmap.org/search?format=json&limit=5&countrycodes=br&q=${encodeURIComponent(q)}`
   );
   const d = await r.json();
 
@@ -103,7 +113,6 @@ async function sugerirEndereco(input, datalistId) {
   dl.innerHTML = "";
 
   d.forEach(i => {
-    if (!i.display_name) return;
     const opt = document.createElement("option");
     opt.value = i.display_name;
     dl.appendChild(opt);
@@ -111,27 +120,79 @@ async function sugerirEndereco(input, datalistId) {
 }
 
 /* =========================
-   GEOCODIFICAR (ROBUSTO)
+   GEOCODIFICAR
 ========================= */
 async function geocodificar(txt) {
   const r = await fetch(
-    `https://nominatim.openstreetmap.org/search?format=json&limit=6&countrycodes=br&q=${encodeURIComponent(txt)}`
+    `https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=br&q=${encodeURIComponent(txt)}`
   );
   const d = await r.json();
   if (!d.length) throw new Error("Endereço não encontrado");
 
-  const res =
-    d.find(i => i.type === "amenity") ||
-    d.find(i => i.address?.city || i.address?.town || i.address?.village) ||
-    d[0];
-
-  if (!res.lat || !res.lon) throw new Error("Endereço impreciso");
-
   return {
-    texto: res.display_name,
-    lat: +res.lat,
-    lon: +res.lon
+    texto: d[0].display_name,
+    lat: +d[0].lat,
+    lon: +d[0].lon
   };
+}
+
+/* =========================
+   SALVAR CLIENTES
+========================= */
+async function salvarClientes() {
+  const clientes = getClientes();
+  let salvos = 0;
+
+  for (let d of document.querySelectorAll(".destino")) {
+    const nome = d.querySelector(".nome").value.trim();
+    const endereco = d.querySelector(".endereco").value.trim();
+    if (!endereco) continue;
+
+    try {
+      const geo = await geocodificar(endereco);
+      if (clientes.some(c => mesmoLocal(c, geo))) continue;
+
+      clientes.push({
+        nome,
+        endereco: geo.texto,
+        lat: geo.lat,
+        lon: geo.lon
+      });
+      salvos++;
+    } catch {}
+  }
+
+  salvarClientesStorage(clientes);
+  listarClientesSelect();
+  alert(`✅ ${salvos} cliente(s) salvos`);
+}
+
+/* =========================
+   LISTAR CLIENTES
+========================= */
+function listarClientesSelect() {
+  const sel = document.getElementById("clientesSelect");
+  if (!sel) return;
+
+  sel.innerHTML = `<option value="">Selecione um cliente</option>`;
+  getClientes().forEach((c, i) => {
+    sel.innerHTML += `<option value="${i}">${c.nome || c.endereco}</option>`;
+  });
+}
+
+/* =========================
+   EXCLUIR CLIENTE
+========================= */
+function excluirClienteSelecionado() {
+  const sel = document.getElementById("clientesSelect");
+  if (sel.value === "") return;
+
+  if (!confirm("Excluir cliente?")) return;
+
+  const clientes = getClientes();
+  clientes.splice(sel.value, 1);
+  salvarClientesStorage(clientes);
+  listarClientesSelect();
 }
 
 /* =========================
@@ -142,12 +203,10 @@ function dist(a, b) {
   const dLat = (b.lat - a.lat) * Math.PI / 180;
   const dLon = (b.lon - a.lon) * Math.PI / 180;
   const x =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(a.lat * Math.PI / 180) *
-    Math.cos(b.lat * Math.PI / 180) *
-    Math.sin(dLon / 2) ** 2;
-
-  return R * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x));
+    Math.sin(dLat/2)**2 +
+    Math.cos(a.lat*Math.PI/180)*Math.cos(b.lat*Math.PI/180)*
+    Math.sin(dLon/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1-x));
 }
 
 /* =========================
@@ -163,14 +222,11 @@ async function calcularRota() {
   destinosGlobais = [];
 
   for (let i of document.querySelectorAll(".endereco")) {
-    const txt = i.value.trim();
-    if (!txt) continue;
-
+    if (!i.value.trim()) continue;
     try {
-      const g = await geocodificar(txt);
-      if (!destinosGlobais.some(d => mesmoLocal(d, g))) {
+      const g = await geocodificar(i.value);
+      if (!destinosGlobais.some(d => mesmoLocal(d, g)))
         destinosGlobais.push(g);
-      }
     } catch {}
   }
 
@@ -183,7 +239,7 @@ async function calcularRota() {
 }
 
 /* =========================
-   ADICIONAR PARADA (CORRIGIDO)
+   ADD PARADA (FIX)
 ========================= */
 async function adicionarDestino() {
   if (!origemAtual) {
@@ -192,10 +248,9 @@ async function adicionarDestino() {
   }
 
   const input = document.getElementById("novaParada");
-  const txt = input.value.trim();
-  if (!txt) return;
+  if (!input.value.trim()) return;
 
-  const novo = await geocodificar(txt);
+  const novo = await geocodificar(input.value);
 
   if (destinosGlobais.some(d => mesmoLocal(d, novo))) {
     alert("Destino já existe");
@@ -235,14 +290,8 @@ function gerarLink() {
   } else {
     const o = encodeURIComponent(origemAtual.texto);
     const d = encodeURIComponent(rotaOrdenada.at(-1).texto);
-    const w = rotaOrdenada
-      .slice(0, -1)
-      .map(r => encodeURIComponent(r.texto))
-      .join("|");
-
-    linkAtual =
-      `https://www.google.com/maps/dir/?api=1&origin=${o}&destination=${d}` +
-      (w ? `&waypoints=${w}` : "");
+    const w = rotaOrdenada.slice(0,-1).map(r => encodeURIComponent(r.texto)).join("|");
+    linkAtual = `https://www.google.com/maps/dir/?api=1&origin=${o}&destination=${d}${w ? `&waypoints=${w}` : ""}`;
   }
 
   document.getElementById("resultado").innerHTML =
@@ -250,7 +299,39 @@ function gerarLink() {
 }
 
 /* =========================
+   ROTAS SALVAS
+========================= */
+function salvarRota() {
+  if (!linkAtual) return;
+
+  const nome = prompt("Nome da rota:");
+  if (!nome) return;
+
+  const rotas = JSON.parse(localStorage.getItem("rotas") || "[]");
+  rotas.push({ nome, link: linkAtual });
+  localStorage.setItem("rotas", JSON.stringify(rotas));
+  listarRotas();
+}
+
+function listarRotas() {
+  const sel = document.getElementById("rotasSelect");
+  sel.innerHTML = `<option value="">Selecione uma rota</option>`;
+
+  JSON.parse(localStorage.getItem("rotas") || []).forEach((r,i) => {
+    sel.innerHTML += `<option value="${i}">${r.nome}</option>`;
+  });
+}
+
+function abrirRotaSelecionada() {
+  const sel = document.getElementById("rotasSelect");
+  if (sel.value === "") return;
+
+  const r = JSON.parse(localStorage.getItem("rotas"))[sel.value];
+  window.open(r.link, "_blank");
+}
+
+/* =========================
    INIT
 ========================= */
-listarClientesSelect?.();
-listarRotas?.();
+listarClientesSelect();
+listarRotas();
