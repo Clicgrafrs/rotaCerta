@@ -14,6 +14,9 @@ const state = {
 /* ======================================================
    UTILIDADES
 ====================================================== */
+/* ======================================================
+   UTILIDADES
+====================================================== */
 function isIOS() {
   return /iPad|iPhone|iPod/.test(navigator.userAgent);
 }
@@ -25,6 +28,15 @@ function normalizar(v) {
 function mesmoLocal(a, b) {
   return normalizar(a.lat) === normalizar(b.lat) &&
          normalizar(a.lon) === normalizar(b.lon);
+}
+
+// 🔹 Valida se o endereço retornado é diferente do digitado
+function precisaConfirmacao(entrada, retorno) {
+  const e = entrada.toLowerCase();
+  const r = retorno.toLowerCase();
+
+  // compara apenas o primeiro trecho (rua / local)
+  return !r.includes(e.split(",")[0]);
 }
 
 /* ======================================================
@@ -60,12 +72,16 @@ async function sugerirEndereco(input, datalistId) {
   if (q.length < 3) return;
 
   const r = await fetch(
-    `https://nominatim.openstreetmap.org/search?format=json&limit=5&countrycodes=br&q=${encodeURIComponent(q)}`,
+    `https://nominatim.openstreetmap.org/search?` +
+    `format=json&limit=8&countrycodes=br&addressdetails=1` +
+    `&q=${encodeURIComponent(q)}`,
     { headers: { "User-Agent": "RotaFacilPRO/1.6" } }
   );
 
   const d = await r.json();
   const dl = document.getElementById(datalistId);
+  if (!dl) return;
+
   dl.innerHTML = "";
 
   d.forEach(i => {
@@ -78,26 +94,37 @@ async function sugerirEndereco(input, datalistId) {
 /* ======================================================
    GEOCODIFICAÇÃO (ROBUSTA + CACHE)
 ====================================================== */
+
 async function geocodificar(txt) {
   if (state.cacheGeo[txt]) return state.cacheGeo[txt];
 
   const r = await fetch(
-    `https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=br&q=${encodeURIComponent(txt)}`,
+    `https://nominatim.openstreetmap.org/search?` +
+    `format=json&limit=5&addressdetails=1&namedetails=1&countrycodes=br` +
+    `&q=${encodeURIComponent(txt)}`,
     { headers: { "User-Agent": "RotaFacilPRO/1.6" } }
   );
 
   const d = await r.json();
   if (!d.length) throw new Error(`Endereço não encontrado: ${txt}`);
 
+  // 🔹 tenta achar o melhor match (rua + número)
+  const melhor =
+    d.find(i => i.address?.house_number) ||
+    d.find(i => i.type === "house") ||
+    d.find(i => i.class === "highway") ||
+    d[0];
+
   const geo = {
-    texto: d[0].display_name,
-    lat: +d[0].lat,
-    lon: +d[0].lon
+    texto: melhor.display_name,
+    lat: +melhor.lat,
+    lon: +melhor.lon
   };
 
   state.cacheGeo[txt] = geo;
   return geo;
 }
+
 
 /* ======================================================
    CLIENTES (STORAGE)
