@@ -164,8 +164,7 @@ function excluirClienteSelecionado() {
 /* ======================================================
    GERAR CAMPOS DE DESTINO
 ====================================================== */
- gerarCampos() {
- function gerarCampos() {
+function gerarCampos() {
   const qtd = +document.getElementById("qtd").value;
   const div = document.getElementById("enderecos");
   div.innerHTML = "";
@@ -176,29 +175,21 @@ function excluirClienteSelecionado() {
     const d = document.createElement("div");
     d.className = "destino";
 
-    /* SELECT CLIENTES SALVOS */
     const sel = document.createElement("select");
     sel.innerHTML = `<option value="">Selecionar endereço salvo</option>`;
 
     clientes.forEach((c, idx) => {
-      sel.innerHTML += `
-        <option value="${idx}">
-          ${c.nome || c.endereco}
-        </option>
-      `;
+      sel.innerHTML += `<option value="${idx}">${c.nome || c.endereco}</option>`;
     });
 
-    /* INPUT ENDEREÇO */
     const end = document.createElement("input");
     end.className = "endereco";
     end.placeholder = "Endereço *";
 
-    /* INPUT NOME */
     const nome = document.createElement("input");
     nome.className = "nome";
     nome.placeholder = "Nome do cliente (opcional)";
 
-    /* AO SELECIONAR CLIENTE */
     sel.onchange = () => {
       if (sel.value === "") return;
       const c = clientes[sel.value];
@@ -210,7 +201,6 @@ function excluirClienteSelecionado() {
     div.appendChild(d);
   }
 }
-
 
     
 
@@ -334,7 +324,7 @@ function gerarLink() {
   }
 
   document.getElementById("resultado").innerHTML =
-  `<li><a href="${linkAtual}" target="_blank">🚗 Abrir rota</a></li>`;
+  `<li><a href="${state.linkAtual}" target="_blank">🚗 Abrir rota</a></li>`;
 }
 
 /* ======================================================
