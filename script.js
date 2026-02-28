@@ -449,19 +449,23 @@ async function adicionarParada() {
     const input = document.getElementById("novaParada");
     const enderecoTxt = input.value.trim();
 
+    // validação básica
     if (!enderecoTxt) {
       alert("Digite o endereço da nova parada");
+      input.focus();
       return;
     }
 
-    if (!origemAtual || !rotaOrdenada.length) {
+    // precisa existir uma rota já calculada
+    if (!origemAtual || !destinosGlobais.length || !rotaOrdenada.length) {
       alert("Calcule uma rota antes de adicionar uma parada");
       return;
     }
 
+    // geocodifica a nova parada
     const novoDestino = await geocodificar(enderecoTxt);
 
-    // evita duplicação
+    // evita duplicidade
     if (destinosGlobais.some(d => mesmoLocal(d, novoDestino))) {
       alert("Esse endereço já está na rota");
       return;
@@ -470,20 +474,30 @@ async function adicionarParada() {
     // adiciona ao conjunto global
     destinosGlobais.push(novoDestino);
 
-    // recalcula rota completa
-    rotaOrdenada = otimizarRota(origemAtual, destinosGlobais);
+    /**
+     * 🔁 NOVA ORIGEM LÓGICA
+     * - se a rota já existe, usa o primeiro ponto da rota atual
+     * - fallback para origem inicial
+     */
+    const origemRecalculo = rotaOrdenada[0] || origemAtual;
 
+    // reotimiza TODA a rota
+    rotaOrdenada = otimizarRota(origemRecalculo, destinosGlobais);
+
+    // gera novo link atualizado
     gerarLink();
 
+    // limpa campo
     input.value = "";
 
+    // rola para o resultado
     document.getElementById("resultado").scrollIntoView({
       behavior: "smooth",
       block: "center"
     });
 
   } catch (e) {
-    alert(e.message);
+    alert(e.message || "Erro ao adicionar parada");
   }
 }
 
