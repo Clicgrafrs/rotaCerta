@@ -286,10 +286,16 @@ async function calcularRota() {
     destinosGlobais = [];
     rotaOrdenada = [];
 
-    // 🔥 sempre recalcula a origem
-    origemAtual = await geocodificar(
-      document.getElementById("origem").value.trim()
-    );
+    const origemInput = document.getElementById("origem").value.trim();
+
+    // ✅ só geocodifica se não houver localização
+    if (!origemAtual || origemInput) {
+      if (!origemInput) {
+        alert("Informe o endereço de origem ou use a localização");
+        return;
+      }
+      origemAtual = await geocodificar(origemInput);
+    }
 
     for (let input of document.querySelectorAll(".endereco")) {
       const valor = input.value.trim();
