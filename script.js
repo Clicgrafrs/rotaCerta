@@ -283,13 +283,13 @@ function otimizarRota(origem, destinos) {
 ========================= */
 async function calcularRota() {
   try {
-    destinosGlobais = [];
+    // limpa somente a rota ordenada (não os destinos globais ainda)
     rotaOrdenada = [];
 
     const origemInput = document.getElementById("origem").value.trim();
 
-    // ✅ só geocodifica se não houver localização
-    if (!origemAtual || origemInput) {
+    // define a origem apenas se ainda não existir
+    if (!origemAtual) {
       if (!origemInput) {
         alert("Informe o endereço de origem ou use a localização");
         return;
@@ -297,10 +297,15 @@ async function calcularRota() {
       origemAtual = await geocodificar(origemInput);
     }
 
+    // sempre recria os destinos SOMENTE no primeiro cálculo
+    destinosGlobais = [];
+
     for (let input of document.querySelectorAll(".endereco")) {
       const valor = input.value.trim();
       if (!valor) continue;
-      destinosGlobais.push(await geocodificar(valor));
+
+      const geo = await geocodificar(valor);
+      destinosGlobais.push(geo);
     }
 
     if (!destinosGlobais.length) {
@@ -308,15 +313,19 @@ async function calcularRota() {
       return;
     }
 
-    // 🔒 remove duplicados
+    // remove destinos duplicados
     destinosGlobais = destinosGlobais.filter(
       (d, i, arr) =>
         i === arr.findIndex(o => mesmoLocal(o, d))
     );
 
+    // otimiza a rota
     rotaOrdenada = otimizarRota(origemAtual, destinosGlobais);
+
+    // gera link atualizado
     gerarLink();
 
+    // rola até o resultado
     document.getElementById("resultado").scrollIntoView({
       behavior: "smooth",
       block: "center"
@@ -326,7 +335,6 @@ async function calcularRota() {
     alert(e.message);
   }
 }
-
 
 /* =========================
    GERAR LINK
@@ -430,6 +438,56 @@ function excluirRotaSelecionada() {
 
   listarRotas();
 }
+
+
+
+/* =========================
+   ADICIONAR PARADA
+========================= */
+async function adicionarParada() {
+  try {
+    const input = document.getElementById("novaParada");
+    const enderecoTxt = input.value.trim();
+
+    if (!enderecoTxt) {
+      alert("Digite o endereço da nova parada");
+      return;
+    }
+
+    if (!origemAtual || !rotaOrdenada.length) {
+      alert("Calcule uma rota antes de adicionar uma parada");
+      return;
+    }
+
+    const novoDestino = await geocodificar(enderecoTxt);
+
+    // evita duplicação
+    if (destinosGlobais.some(d => mesmoLocal(d, novoDestino))) {
+      alert("Esse endereço já está na rota");
+      return;
+    }
+
+    // adiciona ao conjunto global
+    destinosGlobais.push(novoDestino);
+
+    // recalcula rota completa
+    rotaOrdenada = otimizarRota(origemAtual, destinosGlobais);
+
+    gerarLink();
+
+    input.value = "";
+
+    document.getElementById("resultado").scrollIntoView({
+      behavior: "smooth",
+      block: "center"
+    });
+
+  } catch (e) {
+    alert(e.message);
+  }
+}
+
+
 
 /* =========================
    INIT
