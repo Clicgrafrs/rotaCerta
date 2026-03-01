@@ -14,7 +14,7 @@
       --card: #e1e4e9;
       --input: #f2f5f4;
       --primary: #428fc7;
-      --secondary: #428fc7;
+      --secondary: #176196;
       --success: #22c55e;
       --danger: #ef4444;
       --text: #21252e;
@@ -108,7 +108,17 @@
        BOTÕES
     ========================= */
     .btn {
-      padding: 13px;
+      padding: 15px 0px 15px;
+      border: none;
+      border-radius: 12px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      width: 100%;
+    }
+    
+    .btn2 {
+      padding: 10px 0px 12px;
       border: none;
       border-radius: 12px;
       font-size: 15px;
@@ -120,7 +130,7 @@
     .btn.primary { background: var(--primary); color: #fff; margin-bottom:5px; }
     .btn.secondary { background: var(--secondary); color: #fff; }
     .btn.success { background: var(--success); color: #064e3b; }
-    .btn.danger { background: var(--danger); color: #fff; }
+    .btn.danger { background: var(--danger); color: #fff; margin-bottom:5px;}
     .btn.star { background: #fab115; color: #422006; }
     .btn.ghost {
       background-color:#c4c2c2;
@@ -156,6 +166,7 @@
     ========================= */
     .row,
     .container-botoes,
+    .container-botoes1,
     .container-botoes2 {
       display: flex;
       flex-wrap: wrap;
@@ -163,6 +174,7 @@
     }
 
     .row .btn,
+    .container-botoes1 .btn,
     .container-botoes .btn,
     .container-botoes2 .btn {
       flex: 1;
@@ -226,7 +238,7 @@
   <header class="app-header">
       <img src="img/logo_rota.png" width="300">
     <br>
-    <span class="version">v1.1.0</span>
+    <span class="version">v1.0.0</span>
   </header>
 
   <!-- ORIGEM -->
@@ -243,10 +255,17 @@
 
     <label>Quantas paradas?</label>
     <input type="number" id="qtd" min="1" max="10" placeholder="Digite o número de paradas">
-
+    <div class="container-botoes1">
     <button class="btn primary" onclick="gerarCampos()">➕ Gerar destinos</button>
+    <button class="btn danger" onclick="limparDestinos()">❌ Limpar tudo</button>
+    </div>
 
     <div id="enderecos"></div>
+
+<div class="btn2 add_parada">
+<button class="btn secondary" onclick="criarCampoDestino()">➕ Adicionar parada</button>
+</div>
+
 
     <div class="container-botoes">
       <button class="btn ghost" onclick="salvarClientes()">💾 Salvar endereços</button>
@@ -271,24 +290,23 @@
   <!-- CLIENTES SALVOS -->
 
   
-  
+  <!-- RESULTADO -->
+  <section class="card" id="secaoRoteiro">
+    <h3>📍 Roteiro Gerado</h3>
+    <ol id="resultado" class="resultado"></ol>
+  </section>
 
-  <!-- ADICIONAR PARADA -->
+  <!-- SALVAR ROTAS -->
   <section class="card destaque">
-    <h4 style="text-align:center;">Adicionar parada durante a rota</h4>
-    <input type="text" id="novaParada" placeholder="Digite o endereço da nova parada">
+    <h4 style="text-align:center;">Salvar Suas Rotas Favoritas</h4>
+    <!--<input type="text" id="novaParada" placeholder="Digite o endereço da nova parada">-->
 
     <div class="container-botoes2">
-      <button class="btn secondary" onclick="adicionarParada()">➕ Adicionar parada</button>
       <button class="btn star" onclick="salvarRota()">⭐ Salvar rota</button>
     </div>
   </section>
 
-  <!-- RESULTADO -->
-  <section class="card" id="secaoRoteiro">
-    <h3>📍 Roteiro</h3>
-    <ol id="resultado" class="resultado"></ol>
-  </section>
+  
 
   <!-- ROTAS SALVAS -->
   <section class="card">
