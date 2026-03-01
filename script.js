@@ -160,7 +160,7 @@ function mesmoLocal(a, b) {
 async function geocodificar(txt) {
   const texto = txt.trim();
   if (texto.length < 2) {
-    throw new Error("Digite ao menos parte do endereço");
+    throw new Error("Digite um ponto de partida!");
   }
 
   const bias = gerarBiasGeografico(texto);
