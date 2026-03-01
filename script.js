@@ -5,6 +5,77 @@ let destinosGlobais = [];
 let rotaOrdenada = [];
 let linkAtual = null;
 
+
+/* =========================
+   MAPA DOS ESTADOS BR (BIAS)
+========================= */
+const estadosBR = {
+  AC: { lat: -9.9747, lon: -67.8243 },   // Rio Branco
+  AL: { lat: -9.6658, lon: -35.7353 },   // Maceió
+  AP: { lat: 0.0349, lon: -51.0694 },    // Macapá
+  AM: { lat: -3.1190, lon: -60.0217 },   // Manaus
+  BA: { lat: -12.9777, lon: -38.5016 },  // Salvador
+  CE: { lat: -3.7319, lon: -38.5267 },   // Fortaleza
+  DF: { lat: -15.7939, lon: -47.8828 },  // Brasília
+  ES: { lat: -20.3155, lon: -40.3128 },  // Vitória
+  GO: { lat: -16.6869, lon: -49.2648 },  // Goiânia
+  MA: { lat: -2.5307, lon: -44.3068 },   // São Luís
+  MT: { lat: -15.6014, lon: -56.0979 },  // Cuiabá
+  MS: { lat: -20.4697, lon: -54.6201 },  // Campo Grande
+  MG: { lat: -19.9167, lon: -43.9345 },  // Belo Horizonte
+  PA: { lat: -1.4558, lon: -48.4902 },   // Belém
+  PB: { lat: -7.1195, lon: -34.8450 },   // João Pessoa
+  PR: { lat: -25.4284, lon: -49.2733 },  // Curitiba
+  PE: { lat: -8.0476, lon: -34.8770 },   // Recife
+  PI: { lat: -5.0919, lon: -42.8034 },   // Teresina
+  RJ: { lat: -22.9068, lon: -43.1729 },  // Rio de Janeiro
+  RN: { lat: -5.7945, lon: -35.2110 },   // Natal
+  RO: { lat: -8.7608, lon: -63.8999 },   // Porto Velho
+  RR: { lat: 2.8235, lon: -60.6753 },    // Boa Vista
+  RS: { lat: -30.0346, lon: -51.2177 },  // Porto Alegre
+  SC: { lat: -27.5949, lon: -48.5482 },  // Florianópolis
+  SE: { lat: -10.9472, lon: -37.0731 },  // Aracaju
+  SP: { lat: -23.5505, lon: -46.6333 },  // São Paulo
+  TO: { lat: -10.2491, lon: -48.3243 }   // Palmas
+};
+
+
+
+/* =========================
+   DETECTAR UF NO TEXTO
+========================= */
+function extrairUF(texto) {
+  const match = texto
+    .toUpperCase()
+    .match(/\b(AC|AL|AP|AM|BA|CE|DF|ES|GO|MA|MT|MS|MG|PA|PB|PR|PE|PI|RJ|RN|RO|RR|RS|SC|SE|SP|TO)\b/);
+
+  return match ? match[1] : null;
+}
+
+
+
+/* =========================
+   GERAR BIAS GEOGRÁFICO
+========================= */
+function gerarBiasGeografico(texto) {
+  const uf = extrairUF(texto);
+  if (!uf || !estadosBR[uf]) return "";
+
+  const { lat, lon } = estadosBR[uf];
+
+  // radius em metros (300 km)
+  return `&lat=${lat}&lon=${lon}&radius=300000`;
+}
+
+
+/* =========================
+   CORDENADAS PARA MAPS
+========================= */
+function coordenadaParaMaps(lat, lon) {
+  return `${lat.toFixed(6)},${lon.toFixed(6)}`;
+}
+
+
 /* =========================
    ERRO VISUAL
 ========================= */
@@ -29,14 +100,26 @@ function isIOS() {
 ========================= */
 function usarLocalizacao() {
   navigator.geolocation.getCurrentPosition(
-    pos => {
+    async pos => {
+
+      const lat = pos.coords.latitude;
+      const lon = pos.coords.longitude;
+
+      // 🔥 reverse geocoding para obter endereço textual
+      const r = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&addressdetails=1`
+      );
+      const d = await r.json();
+
       origemAtual = {
-        lat: pos.coords.latitude,
-        lon: pos.coords.longitude,
-        texto: `${pos.coords.latitude},${pos.coords.longitude}`
+        lat,
+        lon,
+        textoOriginal: coordenadaParaMaps(lat, lon)
       };
+
       document.getElementById("infoLocalizacao").innerText =
         "📍 Localização ativa";
+
     },
     () => alert("Erro ao obter localização"),
     { enableHighAccuracy: true }
@@ -71,31 +154,51 @@ function mesmoLocal(a, b) {
 /* =========================
    GEOLOCALIZAÇÃO
 ========================= */
+/* =========================
+   GEOLOCALIZAÇÃO (BIAS DINÂMICO)
+========================= */
 async function geocodificar(txt) {
   const texto = txt.trim();
   if (texto.length < 2) {
     throw new Error("Digite ao menos parte do endereço");
   }
 
-  const r = await fetch(
-    `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=5&countrycodes=br&q=${encodeURIComponent(texto)}`
-  );
+  const bias = gerarBiasGeografico(texto);
+
+  const url =
+    `https://nominatim.openstreetmap.org/search` +
+    `?format=json` +
+    `&addressdetails=1` +
+    `&limit=10` +
+    `&countrycodes=br` +
+    `&accept-language=pt-BR` +
+    bias +
+    `&q=${encodeURIComponent(texto)}`;
+
+  const r = await fetch(url, {
+    headers: {
+      "User-Agent": "RotaFacilPRO/1.5.9"
+    }
+  });
 
   const d = await r.json();
   if (!d.length) {
     throw new Error("Endereço não encontrado. Inclua cidade ou estado.");
   }
 
-  const res = d.find(i => i.lat && i.lon);
-  if (!res) {
-    throw new Error("Endereço impreciso.");
-  }
+  const melhor =
+    d.find(i => i.class === "amenity") || // POI (igrejas, hospitais)
+    d.find(i => i.type === "house") ||   // número exato
+    d.find(i => i.address?.road) ||      // rua
+    d[0];                                // fallback seguro
 
   return {
-    texto,
-    lat: +res.lat,
-    lon: +res.lon
-  };
+  textoOriginal: texto,              // 👈 exatamente como o usuário digitou
+  textoFormatado: melhor.display_name,
+  lat: +melhor.lat,
+  lon: +melhor.lon
+};
+
 }
 
 /* =========================
@@ -180,48 +283,80 @@ function excluirClienteSelecionado() {
   listarClientesSelect();
 }
 
+
+/* =========================
+   CRIAR APENAS UM DESTINO POR VEZ
+========================= */
+function criarCampoDestino(prepend = true) {
+  const div = document.getElementById("enderecos");
+  const clientes = getClientes();
+
+  const d = document.createElement("div");
+  d.className = "destino";
+
+  const sel = document.createElement("select");
+  sel.innerHTML = `<option value="">Buscar endereço salvo</option>`;
+  clientes.forEach((c, idx) => {
+    sel.innerHTML += `
+      <option value="${idx}">
+        ${c.nome || c.endereco}
+      </option>`;
+  });
+
+  const end = document.createElement("input");
+  end.className = "endereco";
+  end.placeholder = "Endereço *";
+
+  const nome = document.createElement("input");
+  nome.className = "nome";
+  nome.placeholder = "Nome do cliente (opcional)";
+
+  const btnExcluir = document.createElement("button");
+  btnExcluir.innerHTML = "❌";
+  btnExcluir.className = "btn danger";
+  btnExcluir.style.marginTop = "6px";
+
+  btnExcluir.onclick = () => d.remove();
+
+  sel.onchange = () => {
+    if (!sel.value) return;
+    const c = clientes[sel.value];
+    end.value = c.endereco;
+    nome.value = c.nome || "";
+  };
+
+  d.append(sel, end, nome, btnExcluir);
+
+  // 🔥 INSERE NO TOPO (visual melhor)
+  if (prepend) {
+    div.prepend(d);
+  } else {
+    div.appendChild(d);
+  }
+}
+
+
+
 /* =========================
    GERAR CAMPOS DE DESTINO
 ========================= */
 function gerarCampos() {
   const qtd = +document.getElementById("qtd").value;
-  const div = document.getElementById("enderecos");
-  div.innerHTML = "";
-
-  const clientes = getClientes();
+  if (!qtd || qtd < 1) return;
 
   for (let i = 0; i < qtd; i++) {
-    const d = document.createElement("div");
-    d.className = "destino";
-
-    const sel = document.createElement("select");
-    sel.innerHTML = `<option value="">Buscar endereço salvo</option>`;
-    clientes.forEach((c, idx) => {
-      sel.innerHTML += `
-        <option value="${idx}">
-          ${c.nome || c.endereco}
-        </option>`;
-    });
-
-    const end = document.createElement("input");
-    end.className = "endereco";
-    end.placeholder = "Endereço *";
-
-    const nome = document.createElement("input");
-    nome.className = "nome";
-    nome.placeholder = "Nome do cliente (opcional)";
-
-    sel.onchange = () => {
-      if (!sel.value) return;
-      const c = clientes[sel.value];
-      end.value = c.endereco;
-      nome.value = c.nome || "";
-    };
-
-    d.append(sel, end, nome);
-    div.appendChild(d);
+    criarCampoDestino(true); // sempre acima
   }
 }
+
+/* =========================
+   LIMPAR TODOS OS DESTINOS
+========================= */
+function limparDestinos() {
+  if (!confirm("Deseja remover todos os destinos?")) return;
+  document.getElementById("enderecos").innerHTML = "";
+}
+
 
 /* =========================
    DISTÂNCIA
@@ -239,93 +374,29 @@ function calcularDistancia(lat1, lon1, lat2, lon2) {
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-
-/* =========================
-   OTIMIZAR ROTA (VIZINHO MAIS PRÓXIMO)
-========================= */
-function otimizarRota(origem, destinos) {
-  const rotaFinal = [];
-  let pontoAtual = origem;
-
-  // copia para não alterar o array original
-  const destinosRestantes = [...destinos];
-
-  while (destinosRestantes.length > 0) {
-    let indiceMaisProximo = 0;
-    let menorDistancia = Infinity;
-
-    for (let i = 0; i < destinosRestantes.length; i++) {
-      const d = destinosRestantes[i];
-      const distancia = calcularDistancia(
-        pontoAtual.lat,
-        pontoAtual.lon,
-        d.lat,
-        d.lon
-      );
-
-      if (distancia < menorDistancia) {
-        menorDistancia = distancia;
-        indiceMaisProximo = i;
-      }
-    }
-
-    const proximoDestino = destinosRestantes.splice(indiceMaisProximo, 1)[0];
-    rotaFinal.push(proximoDestino);
-    pontoAtual = proximoDestino;
-  }
-
-  return rotaFinal;
-}
-
-
 /* =========================
    CALCULAR ROTA
 ========================= */
 async function calcularRota() {
   try {
-    // limpa somente a rota ordenada (não os destinos globais ainda)
-    rotaOrdenada = [];
-
-    const origemInput = document.getElementById("origem").value.trim();
-
-    // define a origem apenas se ainda não existir
     if (!origemAtual) {
-      if (!origemInput) {
-        alert("Informe o endereço de origem ou use a localização");
-        return;
-      }
-      origemAtual = await geocodificar(origemInput);
+      origemAtual = await geocodificar(
+        document.getElementById("origem").value.trim()
+      );
     }
 
-    // sempre recria os destinos SOMENTE no primeiro cálculo
     destinosGlobais = [];
-
-    for (let input of document.querySelectorAll(".endereco")) {
-      const valor = input.value.trim();
-      if (!valor) continue;
-
-      const geo = await geocodificar(valor);
-      destinosGlobais.push(geo);
+    for (let i of document.querySelectorAll(".endereco")) {
+      destinosGlobais.push(await geocodificar(i.value));
     }
 
-    if (!destinosGlobais.length) {
-      alert("Adicione ao menos um destino");
-      return;
-    }
-
-    // remove destinos duplicados
-    destinosGlobais = destinosGlobais.filter(
-      (d, i, arr) =>
-        i === arr.findIndex(o => mesmoLocal(o, d))
+    rotaOrdenada = [...destinosGlobais].sort((a, b) =>
+      calcularDistancia(origemAtual.lat, origemAtual.lon, a.lat, a.lon) -
+      calcularDistancia(origemAtual.lat, origemAtual.lon, b.lat, b.lon)
     );
 
-    // otimiza a rota
-    rotaOrdenada = otimizarRota(origemAtual, destinosGlobais);
-
-    // gera link atualizado
     gerarLink();
 
-    // rola até o resultado
     document.getElementById("resultado").scrollIntoView({
       behavior: "smooth",
       block: "center"
@@ -344,28 +415,26 @@ function gerarLink() {
 
   if (isIOS()) {
     const pontos = [
-      origemAtual.texto,
-      ...rotaOrdenada.map(r => r.texto)
+      origemAtual.textoOriginal,
+      ...rotaOrdenada.map(r => r.textoOriginal)
     ].join("+to:");
 
-    linkAtual = `https://maps.apple.com/?daddr=${encodeURIComponent(pontos)}`;
+    linkAtual =
+      `https://maps.apple.com/?daddr=${encodeURIComponent(pontos)}`;
   } else {
-    const o = encodeURIComponent(origemAtual.texto);
-    const d = encodeURIComponent(rotaOrdenada.at(-1).texto);
-    const w = rotaOrdenada
-      .slice(0, -1)
-      .map(r => encodeURIComponent(r.texto))
-      .join("|");
+    const pontos = [
+      origemAtual.textoOriginal,
+      ...rotaOrdenada.map(r => r.textoOriginal)
+    ].map(p => encodeURIComponent(p)).join("/");
 
     linkAtual =
-      `https://www.google.com/maps/dir/?api=1&origin=${o}&destination=${d}` +
-      (w ? `&waypoints=${w}` : "");
+      `https://www.google.com/maps/dir/${pontos}`;
   }
 
   localStorage.setItem("ultimaRota", linkAtual);
 
   document.getElementById("resultado").innerHTML =
-    `<li><a href="${linkAtual}" target="_blank">🚗 Abrir rota otimizada</a></li>`;
+    `<li><a href="${linkAtual}" target="_blank">🚗 CLIQUE PARA ABRIR A ROTA OTIMIZADA</a></li>`;
 }
 
 /* =========================
@@ -438,70 +507,6 @@ function excluirRotaSelecionada() {
 
   listarRotas();
 }
-
-
-
-/* =========================
-   ADICIONAR PARADA
-========================= */
-async function adicionarParada() {
-  try {
-    const input = document.getElementById("novaParada");
-    const enderecoTxt = input.value.trim();
-
-    // validação básica
-    if (!enderecoTxt) {
-      alert("Digite o endereço da nova parada");
-      input.focus();
-      return;
-    }
-
-    // precisa existir uma rota já calculada
-    if (!origemAtual || !destinosGlobais.length || !rotaOrdenada.length) {
-      alert("Calcule uma rota antes de adicionar uma parada");
-      return;
-    }
-
-    // geocodifica a nova parada
-    const novoDestino = await geocodificar(enderecoTxt);
-
-    // evita duplicidade
-    if (destinosGlobais.some(d => mesmoLocal(d, novoDestino))) {
-      alert("Esse endereço já está na rota");
-      return;
-    }
-
-    // adiciona ao conjunto global
-    destinosGlobais.push(novoDestino);
-
-    /**
-     * 🔁 NOVA ORIGEM LÓGICA
-     * - se a rota já existe, usa o primeiro ponto da rota atual
-     * - fallback para origem inicial
-     */
-    const origemRecalculo = rotaOrdenada[0] || origemAtual;
-
-    // reotimiza TODA a rota
-    rotaOrdenada = otimizarRota(origemRecalculo, destinosGlobais);
-
-    // gera novo link atualizado
-    gerarLink();
-
-    // limpa campo
-    input.value = "";
-
-    // rola para o resultado
-    document.getElementById("resultado").scrollIntoView({
-      behavior: "smooth",
-      block: "center"
-    });
-
-  } catch (e) {
-    alert(e.message || "Erro ao adicionar parada");
-  }
-}
-
-
 
 /* =========================
    INIT
