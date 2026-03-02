@@ -151,6 +151,20 @@ function mesmoLocal(a, b) {
   );
 }
 
+
+/* =========================
+   NORMALIZA ENDEREÇOS 
+========================= */
+function normalizarEndereco(txt) {
+  return txt
+    .replace(/\//g, ", ")                  // /RS → , RS
+    .replace(/([a-zà-ú])([A-Z])/g, "$1 $2") // SantoAntônio → Santo Antônio
+    .replace(/\s+/g, " ")                  // espaços duplicados
+    .trim();
+}
+
+
+
 /* =========================
    GEOLOCALIZAÇÃO
 ========================= */
@@ -158,9 +172,11 @@ function mesmoLocal(a, b) {
    GEOLOCALIZAÇÃO (BIAS DINÂMICO)
 ========================= */
 async function geocodificar(txt) {
-  const texto = txt.trim();
-  if (texto.length < 2) {
-    throw new Error("Digite um ponto de partida!");
+async function geocodificar(txt) {
+  const texto = normalizarEndereco(txt.trim());
+
+  if (texto.length < 5) {
+    throw new Error("Digite um endereço mais completo!");
   }
 
   const bias = gerarBiasGeografico(texto);
@@ -182,23 +198,22 @@ async function geocodificar(txt) {
   });
 
   const d = await r.json();
+
   if (!d.length) {
-    throw new Error("Endereço não encontrado. Inclua cidade ou estado.");
+    throw new Error("Endereço não encontrado. Verifique cidade e UF.");
   }
 
   const melhor =
-    d.find(i => i.class === "amenity") || // POI (igrejas, hospitais)
-    d.find(i => i.type === "house") ||   // número exato
-    d.find(i => i.address?.road) ||      // rua
-    d[0];                                // fallback seguro
+    d.find(i => i.type === "house") ||
+    d.find(i => i.address?.road) ||
+    d[0];
 
   return {
-  textoOriginal: texto,              // 👈 exatamente como o usuário digitou
-  textoFormatado: melhor.display_name,
-  lat: +melhor.lat,
-  lon: +melhor.lon
-};
-
+    textoOriginal: texto,
+    textoFormatado: melhor.display_name,
+    lat: +melhor.lat,
+    lon: +melhor.lon
+  };
 }
 
 /* =========================
