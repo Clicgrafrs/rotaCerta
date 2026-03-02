@@ -172,7 +172,6 @@ function normalizarEndereco(txt) {
    GEOLOCALIZAÇÃO (BIAS DINÂMICO)
 ========================= */
 async function geocodificar(txt) {
-async function geocodificar(txt) {
   const texto = normalizarEndereco(txt.trim());
 
   if (texto.length < 5) {
