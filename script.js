@@ -152,54 +152,67 @@ function mesmoLocal(a, b) {
 }
 
 
+
+
 /* =========================
-   NORMALIZA ENDEREÇOS 
+   NORMALIZAÇÃO DE ENDEREÇO
 ========================= */
 function normalizarEndereco(txt) {
   return txt
-    .replace(/\//g, ", ")                  // /RS → , RS
-    .replace(/([a-zà-ú])([A-Z])/g, "$1 $2") // SantoAntônio → Santo Antônio
-    .replace(/\s+/g, " ")                  // espaços duplicados
+    .replace(/CEP\s*\d{5}-?\d{3}/gi, "")
+    .replace(/\bAV\.?\b/gi, "Avenida")
+    .replace(/\bR\.?\b/gi, "Rua")
+    .replace(/\//g, ", ")
+    .replace(/([a-zà-ú])([A-Z])/g, "$1 $2")
+    .replace(/\s+/g, " ")
     .trim();
 }
 
 
 
 /* =========================
-   GEOLOCALIZAÇÃO
-========================= */
-/* =========================
    GEOLOCALIZAÇÃO (BIAS DINÂMICO)
 ========================= */
 async function geocodificar(txt) {
-  const texto = normalizarEndereco(txt.trim());
+  const original = txt.trim();
+  const texto = normalizarEndereco(original);
 
-  if (texto.length < 5) {
-    throw new Error("Digite um endereço mais completo!");
+  if (texto.length < 3) {
+    throw new Error("Digite um endereço válido");
   }
 
-  const bias = gerarBiasGeografico(texto);
+  async function buscar(q) {
+    const url =
+      `https://nominatim.openstreetmap.org/search` +
+      `?format=json` +
+      `&limit=5` +
+      `&countrycodes=br` +
+      `&accept-language=pt-BR` +
+      `&addressdetails=1` +
+      `&q=${encodeURIComponent(q)}`;
 
-  const url =
-    `https://nominatim.openstreetmap.org/search` +
-    `?format=json` +
-    `&addressdetails=1` +
-    `&limit=10` +
-    `&countrycodes=br` +
-    `&accept-language=pt-BR` +
-    bias +
-    `&q=${encodeURIComponent(texto)}`;
+    const r = await fetch(url, {
+      headers: { "User-Agent": "RotaFacilPRO/1.6.2" }
+    });
 
-  const r = await fetch(url, {
-    headers: {
-      "User-Agent": "RotaFacilPRO/1.5.9"
-    }
-  });
+    return await r.json();
+  }
 
-  const d = await r.json();
+  // 1️⃣ tentativa: endereço completo
+  let d = await buscar(texto);
+
+  // 2️⃣ fallback: remove número e complemento
+  if (!d.length) {
+    const simplificado = texto
+      .replace(/\d+/g, "")
+      .replace(/,\s*(ap|apt|sala|bloco|centro).*$/i, "")
+      .trim();
+
+    d = await buscar(simplificado);
+  }
 
   if (!d.length) {
-    throw new Error("Endereço não encontrado. Verifique cidade e UF.");
+    throw new Error("Endereço não encontrado. Verifique cidade ou UF.");
   }
 
   const melhor =
@@ -208,12 +221,15 @@ async function geocodificar(txt) {
     d[0];
 
   return {
-    textoOriginal: texto,
+    textoOriginal: original,
     textoFormatado: melhor.display_name,
     lat: +melhor.lat,
     lon: +melhor.lon
   };
 }
+
+
+
 
 /* =========================
    SALVAR CLIENTES
